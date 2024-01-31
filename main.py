@@ -1,4 +1,3 @@
-import git
 import telebot
 import sqlite3
 import json

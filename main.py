@@ -1,4 +1,3 @@
-import git
 import telebot
 import sqlite3
 import json
@@ -7,6 +6,8 @@ import datetime
 from telebot import types
 
 
+for i in range(10):
+    print(i + 1)
 bot = telebot.TeleBot('6887806463:AAGFV6FPhnLj6Iy1-jAHfjcb3BmP10YXZh0')
 bot.delete_webhook()
 all_cards = {

@@ -328,19 +328,32 @@ def callback_message(callback):
         else:
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
     elif callback.data == 'next_card':
-        num += 1
+        if len(items) > 1:
+            num += 1
+            markup = types.InlineKeyboardMarkup()
+            number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data='None')
+            if num + 1 != len(items):
+                next_card = types.InlineKeyboardButton('>', callback_data='next_card')
+                previous_card = types.InlineKeyboardButton('<', callback_data='previous_card')
+                markup.row(previous_card, number_of_card, next_card)
+            else:
+                previous_card = types.InlineKeyboardButton('<', callback_data='previous_card')
+                markup.row(previous_card, number_of_card)
+            file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'), caption=all_cards[str(items[num])][0])
+            bot.edit_message_media(file, callback.message.chat.id, msg.message_id, reply_markup=markup)
+    elif callback.data == 'previous_card':
+        num -= 1
         markup = types.InlineKeyboardMarkup()
         number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data='None')
-        if num != len(items):
+        if num != 0:
+            next_card = types.InlineKeyboardButton('>', callback_data='next_card')
+            previous_card = types.InlineKeyboardButton('<', callback_data='previous_card')
+            markup.row(previous_card, number_of_card, next_card)
+        else:
             next_card = types.InlineKeyboardButton('>', callback_data='next_card')
             markup.row(number_of_card, next_card)
-            print(10)
-        else:
-            previous_card = types.InlineKeyboardButton('<', callback_data='previous_card')
-            markup.row(number_of_card, previous_card)
-            print(20)
-        bot.edit_message_text(all_cards[str(items[num])][0], callback.message.chat.id, msg.message_id - 2, reply_markup=markup)
-        bot.edit_message_media(open(f'./{items[num]}.jpg', 'rb'), callback.message.chat.id, msg.message_id - 2)
+        file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'),caption=all_cards[str(items[num])][0])
+        bot.edit_message_media(file, callback.message.chat.id, msg.message_id, reply_markup=markup)
     cur.close()
     conn.close()
 

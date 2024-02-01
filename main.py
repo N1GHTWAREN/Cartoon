@@ -179,6 +179,7 @@ def callback_message(callback):
         for i in user:
             if i[0] == callback.message.chat.id:
                 rating = i[3]
+                break
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.send_message(callback.message.chat.id, f'Имя:\n{callback.message.chat.first_name}\nРейтинг: {rating}\nПобед в дуэлях: _')
     elif callback.data == 'deck':
@@ -227,6 +228,8 @@ def callback_message(callback):
             markup.row(number_of_card, next_card)
             msg = bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
             cur.execute("UPDATE users SET message_id_to_edit = '%i' WHERE id = '%i'" % (msg.message_id, callback.message.chat.id))
+            conn.commit()
+            cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
             conn.commit()
         else:
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
@@ -335,9 +338,12 @@ def callback_message(callback):
                 cards = json.loads(i[2])
                 num = i[5]
                 msid = i[6]
+                break
         items = list(map(lambda x: x[0], cards.items()))
         if len(items) > 1:
             num += 1
+            cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
+            conn.commit()
             markup = types.InlineKeyboardMarkup()
             number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data='None')
             if num + 1 != len(items):
@@ -358,8 +364,11 @@ def callback_message(callback):
                 cards = json.loads(i[2])
                 num = i[5]
                 msid = i[6]
+                break
         items = list(map(lambda x: x[0], cards.items()))
         num -= 1
+        cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
+        conn.commit()
         markup = types.InlineKeyboardMarkup()
         number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data='None')
         if num != 0:
@@ -370,7 +379,7 @@ def callback_message(callback):
             next_card = types.InlineKeyboardButton('>', callback_data='next_card')
             markup.row(number_of_card, next_card)
         file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'),caption=all_cards[str(items[num])][0])
-        bot.edit_message_media(file, callback.message.chat.id, msg.message_id, reply_markup=markup)
+        bot.edit_message_media(file, callback.message.chat.id, msid, reply_markup=markup)
     cur.close()
     conn.close()
 

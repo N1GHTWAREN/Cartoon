@@ -94,11 +94,11 @@ def time_conversion(sec):
 def start(message):
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
-    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, num_of_show int, message_id_to_edit int)')
+    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, num_of_show int, message_id_to_edit int, items VARCHAR)')
     conn.commit()
     if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE id = '%i')" % message.from_user.id).fetchone()[0] == 0:
         now = datetime.datetime.now()
-        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, num_of_show, message_id_to_edit) VALUES ('%i', '%i', '%s', '%i', '%s', '%i', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), 0, 0))
+        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, num_of_show, message_id_to_edit, items) VALUES ('%i', '%i', '%s', '%i', '%s', '%i', '%i', '%s')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), 0, 0, '[]'))
         conn.commit()
     cur.close()
     conn.close()
@@ -197,6 +197,7 @@ def callback_message(callback):
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         cur.execute("SELECT * FROM users")
         user = cur.fetchall()
+        number = 0
         for i in user:
             if i[0] == callback.message.chat.id:
                 number = i[1]
@@ -231,6 +232,8 @@ def callback_message(callback):
             conn.commit()
             cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
             conn.commit()
+            cur.execute("UPDATE users SET items = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
+            conn.commit()
         else:
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
     elif callback.data == 'show_common':
@@ -246,15 +249,20 @@ def callback_message(callback):
                     do_not_have_cards = True
                 break
         if not do_not_have_cards:
-            items = list(map(lambda x: x[0], cards.items()))
-            names = ''
-            for i in range(1, len(all_cards) + 1):
-                if str(i) in items and all_cards[str(i)][4] == 'common':
-                    names += f'\n{all_cards[str(i)][0]} x {cards[str(i)]}'
-            if names != '':
-                bot.send_message(callback.message.chat.id, f'Твои обычные карты:{names}')
-            else:
-                bot.send_message(callback.message.chat.id, 'У тебя пока нет обычных карт')
+            markup = types.InlineKeyboardMarkup()
+            for i in cards.items():
+                if all_cards[str(i[0])][4] == 'common': items.append(str(i[0]))
+            num = 0
+            number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data='None')
+            next_card = types.InlineKeyboardButton('>', callback_data='next_card')
+            markup.row(number_of_card, next_card)
+            msg = bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
+            cur.execute("UPDATE users SET message_id_to_edit = '%i' WHERE id = '%i'" % (msg.message_id, callback.message.chat.id))
+            conn.commit()
+            cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
+            conn.commit()
+            cur.execute("UPDATE users SET items = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
+            conn.commit()
         else:
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
     elif callback.data == 'show_rare':
@@ -332,14 +340,13 @@ def callback_message(callback):
     elif callback.data == 'next_card':
         cur.execute("SELECT * FROM users")
         user = cur.fetchall()
-        cards, num, msid = {}, 0, 0
+        cards, num, msid, items = {}, 0, 0, []
         for i in user:
             if i[0] == callback.message.chat.id:
-                cards = json.loads(i[2])
+                items = json.loads(i[7])
                 num = i[5]
                 msid = i[6]
                 break
-        items = list(map(lambda x: x[0], cards.items()))
         if len(items) > 1:
             num += 1
             cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
@@ -358,14 +365,13 @@ def callback_message(callback):
     elif callback.data == 'previous_card':
         cur.execute("SELECT * FROM users")
         user = cur.fetchall()
-        cards, num, msid = {}, 0, 0
+        cards, num, msid, items = {}, 0, 0, []
         for i in user:
             if i[0] == callback.message.chat.id:
-                cards = json.loads(i[2])
+                items = json.loads(i[7])
                 num = i[5]
                 msid = i[6]
                 break
-        items = list(map(lambda x: x[0], cards.items()))
         num -= 1
         cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
         conn.commit()

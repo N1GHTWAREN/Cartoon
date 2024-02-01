@@ -167,8 +167,12 @@ def on_click(message):
     bot.register_next_step_handler(message, on_click)
 
 
+num, msg, items = 0, '', []
+
+
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_message(callback):
+    global num, msg, items
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
     if callback.data == 'profile':
@@ -195,17 +199,16 @@ def callback_message(callback):
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         cur.execute("SELECT * FROM users")
         user = cur.fetchall()
-        num = 0
         for i in user:
             if i[0] == callback.message.chat.id:
-                num = i[1]
+                number = i[1]
                 break
-        if num == 0:
+        if number == 0:
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
-        elif str(num)[-1] != '1':
-            bot.send_message(callback.message.chat.id, f'Твоя коллеция состоит из {num} карт', reply_markup=markup)
+        elif str(number)[-1] != '1':
+            msg = bot.send_message(callback.message.chat.id, f'Твоя коллеция состоит из {number} карт', reply_markup=markup)
         else:
-            bot.send_message(callback.message.chat.id, f'Твоя коллеция состоит из {num} карты', reply_markup=markup)
+            msg = bot.send_message(callback.message.chat.id, f'Твоя коллеция состоит из {number} карты', reply_markup=markup)
     elif callback.data == 'show_all':
         cur.execute("SELECT * FROM users")
         user = cur.fetchall()
@@ -219,12 +222,13 @@ def callback_message(callback):
                     do_not_have_cards = True
                 break
         if not do_not_have_cards:
+            markup = types.InlineKeyboardMarkup()
             items = list(map(lambda x: x[0], cards.items()))
-            names = ''
-            for i in range(1, len(all_cards) + 1):
-                if str(i) in items:
-                    names += f'\n{all_cards[str(i)][0]} x {cards[str(i)]}'
-            bot.send_message(callback.message.chat.id, f'Все твои карты:{names}')
+            num = 0
+            number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data='None')
+            next_card = types.InlineKeyboardButton('>', callback_data='next_card')
+            markup.row(number_of_card, next_card)
+            msg = bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
         else:
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
     elif callback.data == 'show_common':
@@ -323,6 +327,20 @@ def callback_message(callback):
                 bot.send_message(callback.message.chat.id, 'У тебя пока нет легендарных карт')
         else:
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
+    elif callback.data == 'next_card':
+        num += 1
+        markup = types.InlineKeyboardMarkup()
+        number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data='None')
+        if num != len(items):
+            next_card = types.InlineKeyboardButton('>', callback_data='next_card')
+            markup.row(number_of_card, next_card)
+            print(10)
+        else:
+            previous_card = types.InlineKeyboardButton('<', callback_data='previous_card')
+            markup.row(number_of_card, previous_card)
+            print(20)
+        bot.edit_message_text(all_cards[str(items[num])][0], callback.message.chat.id, msg.message_id - 2, reply_markup=markup)
+        bot.edit_message_media(open(f'./{items[num]}.jpg', 'rb'), callback.message.chat.id, msg.message_id - 2)
     cur.close()
     conn.close()
 

@@ -94,11 +94,11 @@ def time_conversion(sec):
 def start(message):
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
-    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, num_of_show int, message_id_to_edit int, items VARCHAR)')
+    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, num_of_show int, items VARCHAR)')
     conn.commit()
     if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE id = '%i')" % message.from_user.id).fetchone()[0] == 0:
         now = datetime.datetime.now()
-        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, num_of_show, message_id_to_edit, items) VALUES ('%i', '%i', '%s', '%i', '%s', '%i', '%i', '%s')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), 0, 0, '[]'))
+        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, num_of_show, items) VALUES ('%i', '%i', '%s', '%i', '%s', '%i', '%s')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), 0, '[]'))
         conn.commit()
     cur.close()
     conn.close()
@@ -231,9 +231,7 @@ def callback_message(callback):
                 markup.row(number_of_card, next_card)
             else:
                 markup.add(number_of_card)
-            msg = bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
-            cur.execute("UPDATE users SET message_id_to_edit = '%i' WHERE id = '%i'" % (msg.message_id, callback.message.chat.id))
-            conn.commit()
+            bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
             cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
             conn.commit()
             cur.execute("UPDATE users SET items = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
@@ -264,9 +262,7 @@ def callback_message(callback):
                 markup.row(number_of_card, next_card)
             else:
                 markup.add(number_of_card)
-            msg = bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
-            cur.execute("UPDATE users SET message_id_to_edit = '%i' WHERE id = '%i'" % (msg.message_id, callback.message.chat.id))
-            conn.commit()
+            bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
             cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
             conn.commit()
             cur.execute("UPDATE users SET items = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
@@ -297,9 +293,7 @@ def callback_message(callback):
                 markup.row(number_of_card, next_card)
             else:
                 markup.add(number_of_card)
-            msg = bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
-            cur.execute("UPDATE users SET message_id_to_edit = '%i' WHERE id = '%i'" % (
-            msg.message_id, callback.message.chat.id))
+            bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
             conn.commit()
             cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
             conn.commit()
@@ -331,9 +325,7 @@ def callback_message(callback):
                 markup.row(number_of_card, next_card)
             else:
                 markup.add(number_of_card)
-            msg = bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
-            cur.execute("UPDATE users SET message_id_to_edit = '%i' WHERE id = '%i'" % (
-            msg.message_id, callback.message.chat.id))
+            bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
             conn.commit()
             cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
             conn.commit()
@@ -365,9 +357,7 @@ def callback_message(callback):
                 markup.row(number_of_card, next_card)
             else:
                 markup.add(number_of_card)
-            msg = bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
-            cur.execute("UPDATE users SET message_id_to_edit = '%i' WHERE id = '%i'" % (
-            msg.message_id, callback.message.chat.id))
+            bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
             conn.commit()
             cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
             conn.commit()
@@ -378,12 +368,11 @@ def callback_message(callback):
     elif callback.data == 'next_card':
         cur.execute("SELECT * FROM users")
         user = cur.fetchall()
-        cards, num, msid, items = {}, 0, 0, []
+        cards, num, items = {}, 0, []
         for i in user:
             if i[0] == callback.message.chat.id:
-                items = json.loads(i[7])
+                items = json.loads(i[6])
                 num = i[5]
-                msid = i[6]
                 break
         if len(items) > 1:
             num += 1
@@ -399,16 +388,15 @@ def callback_message(callback):
                 previous_card = types.InlineKeyboardButton('<', callback_data='previous_card')
                 markup.row(previous_card, number_of_card)
             file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'), caption=all_cards[str(items[num])][0])
-            bot.edit_message_media(file, callback.message.chat.id, msid, reply_markup=markup)
+            bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
     elif callback.data == 'previous_card':
         cur.execute("SELECT * FROM users")
         user = cur.fetchall()
-        cards, num, msid, items = {}, 0, 0, []
+        cards, num, items = {}, 0, []
         for i in user:
             if i[0] == callback.message.chat.id:
-                items = json.loads(i[7])
+                items = json.loads(i[6])
                 num = i[5]
-                msid = i[6]
                 break
         num -= 1
         cur.execute("UPDATE users SET num_of_show = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
@@ -423,7 +411,7 @@ def callback_message(callback):
             next_card = types.InlineKeyboardButton('>', callback_data='next_card')
             markup.row(number_of_card, next_card)
         file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'),caption=all_cards[str(items[num])][0])
-        bot.edit_message_media(file, callback.message.chat.id, msid, reply_markup=markup)
+        bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
     cur.close()
     conn.close()
 

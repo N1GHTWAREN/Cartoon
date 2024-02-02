@@ -366,7 +366,7 @@ def callback_message(callback):
         item_num = int(json.loads(callback.data)[1])
         cur.execute("SELECT * FROM users")
         user = cur.fetchall()
-        items = []
+        items, num = [], 0
         for i in user:
             if i[0] == callback.message.chat.id:
                 items = json.loads(i[4 + item_num])
@@ -391,7 +391,7 @@ def callback_message(callback):
         item_num = int(json.loads(callback.data)[1])
         cur.execute("SELECT * FROM users")
         user = cur.fetchall()
-        items = []
+        items, num = [], 0
         for i in user:
             if i[0] == callback.message.chat.id:
                 items = json.loads(i[4 + item_num])

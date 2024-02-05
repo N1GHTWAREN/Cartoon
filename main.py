@@ -50,10 +50,10 @@ all_cards = {
     '39': ('Mercedes-Benz E-Класс (2018)', '1992 - настоящее время', '🇩🇪', '2.0 / 184 л.с. / бензин', 'epic')
 
 }
-for_random = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
-              '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36',
-              '37', '38', '39']
+for_random = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39']
 rarities = (1, 3.928, 3.928, 3.928, 3.928, 3.928, 3.75, 1, 3.75, 3.75, 3.928, 3.928, 0.833, 1, 1, 0.833, 3.928, 0.833, 0.833, 3.928, 3.928, 3.75, 0.833, 1, 0.833, 3.928, 0.833, 3.928, 0.833, 3.75, 3.75, 0.833, 3.75, 0.833, 3.928, 3.75, 3.928, 0.833, 0.833)
+skill_prices = [1000, 3000, 5000, 10000, 15000, 25000, 35000, 50000, 75000]
+cooldown_prices = [100000, 200000]
 
 
 def rarity_test(card):
@@ -94,11 +94,11 @@ def time_conversion(sec):
 def start(message):
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
-    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int)')
+    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int, duel_wins int, influence_points int, card_cooldown_level int)')
     conn.commit()
     if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE id = '%i')" % message.from_user.id).fetchone()[0] == 0:
         now = datetime.datetime.now()
-        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1))
+        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 0))
         conn.commit()
     cur.close()
     conn.close()
@@ -155,20 +155,11 @@ def on_click(message):
         prof = types.InlineKeyboardButton('Профиль 👤', callback_data=json.dumps(['profile', '']))
         deck = types.InlineKeyboardButton('Коллекция 🃏', callback_data=json.dumps(['deck', '']))
         duel = types.InlineKeyboardButton('Начать дуэль ⚔️', callback_data=json.dumps(['duel', '']))
+        shop = types.InlineKeyboardButton('Магазин 🛍', callback_data=json.dumps(['shop', '']))
         markup.row(prof, deck)
         markup.row(duel)
+        markup.row(shop)
         bot.send_photo(message.chat.id, open('./garage_main.png', 'rb'), '🤔💭 Доступные действия:', reply_markup=markup)
-    elif message.text[0] == '@':
-        if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE username = '%s')" % message.text).fetchone()[0]:
-            user = cur.execute("SELECT * FROM users WHERE username = '%s')" % message.text).fetchone()
-            ida = int(user[0])
-            markup = types.InlineKeyboardMarkup()
-            accept = types.InlineKeyboardButton('✅ Принять', callback_data=json.dumps(['accept', message.from_user.id, ida, message.text]))
-            decline = types.InlineKeyboardButton('❌ Отклонить', callback_data=json.dumps(['decline', message.from_user.id, message.text]))
-            markup.row(accept, decline)
-            bot.send_message(ida, f'❗️ Пользователь {message.from_user.username} предложил вам провести дуэль', reply_markup=markup)
-        else:
-            bot.send_message(message.chat.id, 'Пользователь с таким @username ещё ни разу не запускал эту игру(')
     cur.close()
     conn.close()
     bot.register_next_step_handler(message, on_click)
@@ -182,8 +173,10 @@ def callback_message(callback):
     if json.loads(callback.data)[0] == 'profile':
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
         rating = user[3]
+        duel_wins = user[17]
+        driving_skill = user[16]
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
-        bot.send_message(callback.message.chat.id, f'Имя:\n{callback.message.chat.first_name}\nРейтинг: {rating}\nПобед в дуэлях: _')
+        bot.send_message(callback.message.chat.id, f'Имя:\n{callback.message.chat.first_name}\nРейтинг: {rating}\nПобед в дуэлях: {duel_wins}\nНавык вождения: {driving_skill}/10')
     elif json.loads(callback.data)[0] == 'deck':
         markup = types.InlineKeyboardMarkup()
         show_all = types.InlineKeyboardButton('Показать все карты', callback_data=json.dumps(['show_all', None]))
@@ -377,18 +370,73 @@ def callback_message(callback):
         bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
     elif json.loads(callback.data)[0] == 'duel':
         markup = types.InlineKeyboardMarkup()
-        cancel = types.InlineKeyboardButton('🚫 Отменить предыдущее действие', callback_data=json.dumps(['cancel', '']))
+        cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
         markup.add(cancel)
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.send_message(callback.message.chat.id, '🏎 Введи @username пользователя, с которым хочешь начать дуэль', reply_markup=markup)
+        bot.register_next_step_handler(callback.message, duels)
     elif json.loads(callback.data)[0] == 'cancel':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        bot.clear_step_handler_by_chat_id(callback.message.chat.id)
+        bot.register_next_step_handler(callback.message, on_click)
     elif json.loads(callback.data)[0] == 'accept':
         bot.send_message(int(json.loads(callback.data)[1]), f'✅ {json.loads(callback.data)[3]} принял твое предложение')
     elif json.loads(callback.data)[0] == 'decline':
         bot.send_message(int(json.loads(callback.data)[1]), f'❌ {json.loads(callback.data)[2]} отклонил твое предложение')
+    elif json.loads(callback.data)[0] == 'shop':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        influence_points = int(user[18])
+        markup = types.InlineKeyboardMarkup()
+        upgrade_skill = types.InlineKeyboardButton('⏫ Повысить уровень навыка вождения', callback_data=json.dumps(['up_skill', '']))
+        upgrade_time = types.InlineKeyboardButton('⏬ Уменьшить время между получением новых карт', callback_data=json.dumps(['up_time', '']))
+        markup.row(upgrade_skill)
+        markup.row(upgrade_time)
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        bot.send_message(callback.message.chat.id, f'🛒 Магазин гаража, здесь ты можешь купить разные улучшения за очки влияния\nТвои очки влияния: {influence_points}', reply_markup=markup)
+    elif json.loads(callback.data)[0] == 'up_skill':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        driving_skill = int(user[16])
+        if driving_skill != 10:
+            markup = types.InlineKeyboardMarkup()
+            buy = types.InlineKeyboardButton('✅ Приобрести улучшение', callback_data=json.dumps(['buy_skill', '']))
+            cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
+            markup.add(buy, cancel)
+            bot.send_message(callback.message.chat.id, f'Купить улучшение навыка вождения до {driving_skill + 1} уровня за {skill_prices[driving_skill - 1]} очков влияния', reply_markup=markup)
+        else:
+            bot.send_message(callback.message.chat.id, 'У тебя максимальный навык вождения')
+    elif json.loads(callback.data)[0] == 'up_time':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        cooldown_level = int(user[19])
+        if cooldown_level != 3:
+            markup = types.InlineKeyboardMarkup()
+            buy = types.InlineKeyboardButton('✅ Приобрести улучшение', callback_data=json.dumps(['buy_cooldown', '']))
+            cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
+            markup.add(buy, cancel)
+            bot.send_message(callback.message.chat.id, f'Купить улучшение навыка вождения до {cooldown_level + 1} уровня за {cooldown_prices[cooldown_level - 1]} очков влияния', reply_markup=markup)
     cur.close()
     conn.close()
 
+
+def duels(message):
+    conn = sqlite3.connect('garage_data_base.sql')
+    cur = conn.cursor()
+    if message.text[0] == '@':
+        if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE username = '%s')" % message.text).fetchone()[0]:
+            user = cur.execute("SELECT * FROM users WHERE username = '%s')" % message.text).fetchone()
+            ida = int(user[0])
+            markup = types.InlineKeyboardMarkup()
+            accept = types.InlineKeyboardButton('✅ Принять', callback_data=json.dumps(
+                ['accept', message.from_user.id, ida, message.text]))
+            decline = types.InlineKeyboardButton('❌ Отклонить', callback_data=json.dumps(
+                ['decline', message.from_user.id, message.text]))
+            markup.row(accept, decline)
+            bot.send_message(ida, f'❗️ Пользователь {message.from_user.username} предложил вам провести дуэль', reply_markup=markup)
+        else:
+            bot.send_message(message.chat.id, 'Пользователь с таким @username ещё ни разу не запускал эту игру(')
+    else:
+        bot.send_message(message.chat.id, 'Ты ввёл @username неправильно, попробуй ещё раз, возможно ты забыл знак @')
+        bot.register_next_step_handler(message, duels)
+    cur.close()
+    conn.close()
 
 bot.polling(none_stop=True)

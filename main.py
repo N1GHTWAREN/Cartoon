@@ -152,8 +152,8 @@ def on_click(message):
             bot.send_message(message.chat.id, f'До следующей попытки {time_conversion(1 - (datetime.datetime.now() - last_time).seconds)}')
     elif message.text == 'Главное меню 🏠':
         markup = types.InlineKeyboardMarkup()
-        prof = types.InlineKeyboardButton('Твой профиль 👤', callback_data=json.dumps(['profile', '']))
-        deck = types.InlineKeyboardButton('Твоя коллекция 🃏', callback_data=json.dumps(['deck', '']))
+        prof = types.InlineKeyboardButton('Профиль 👤', callback_data=json.dumps(['profile', '']))
+        deck = types.InlineKeyboardButton('Коллекция 🃏', callback_data=json.dumps(['deck', '']))
         duel = types.InlineKeyboardButton('Начать дуэль ⚔️', callback_data=json.dumps(['duel', '']))
         markup.row(prof, deck)
         markup.row(duel)

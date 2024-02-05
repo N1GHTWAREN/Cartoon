@@ -94,11 +94,11 @@ def time_conversion(sec):
 def start(message):
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
-    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR)')
+    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int)')
     conn.commit()
     if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE id = '%i')" % message.from_user.id).fetchone()[0] == 0:
         now = datetime.datetime.now()
-        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username))
+        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1))
         conn.commit()
     cur.close()
     conn.close()
@@ -125,15 +125,9 @@ def on_click(message):
     elif message.text == '/info':
         return info(message)
     elif message.text == 'Получить новую карту 🚗':
-        cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        cards = {}
-        last_time = None
-        for i in user:
-            if i[0] == message.chat.id:
-                cards = json.loads(i[2])
-                last_time = datetime.datetime(*json.loads(i[4]))
-                break
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % message.from_user.id).fetchone()
+        cards = json.loads(user[2])
+        last_time = datetime.datetime(*json.loads(user[4]))
         # 14400
         if (datetime.datetime.now() - last_time).seconds >= 1:
             card_num = random.choices(for_random, weights=rarities)[0]
@@ -165,19 +159,14 @@ def on_click(message):
         markup.row(duel)
         bot.send_photo(message.chat.id, open('./garage_main.png', 'rb'), '🤔💭 Доступные действия:', reply_markup=markup)
     elif message.text[0] == '@':
-        cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        id = 0
-        for i in user:
-            if i[15] == message.text:
-                id = int(i[0])
-                break
-        if id != 0:
+        if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE username = '%s')" % message.text).fetchone()[0]:
+            user = cur.execute("SELECT * FROM users WHERE username = '%s')" % message.text).fetchone()
+            ida = int(user[0])
             markup = types.InlineKeyboardMarkup()
-            accept = types.InlineKeyboardButton('✅ Принять', callback_data=json.dumps(['accept', message.from_user.id, id, message.text]))
+            accept = types.InlineKeyboardButton('✅ Принять', callback_data=json.dumps(['accept', message.from_user.id, ida, message.text]))
             decline = types.InlineKeyboardButton('❌ Отклонить', callback_data=json.dumps(['decline', message.from_user.id, message.text]))
             markup.row(accept, decline)
-            bot.send_message(id, f'❗️ Пользователь {message.from_user.username} предложил вам провести дуэль', reply_markup=markup)
+            bot.send_message(ida, f'❗️ Пользователь {message.from_user.username} предложил вам провести дуэль', reply_markup=markup)
         else:
             bot.send_message(message.chat.id, 'Пользователь с таким @username ещё ни разу не запускал эту игру(')
     cur.close()
@@ -191,13 +180,8 @@ def callback_message(callback):
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
     if json.loads(callback.data)[0] == 'profile':
-        cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        rating = 0
-        for i in user:
-            if i[0] == callback.message.chat.id:
-                rating = i[3]
-                break
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        rating = user[3]
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.send_message(callback.message.chat.id, f'Имя:\n{callback.message.chat.first_name}\nРейтинг: {rating}\nПобед в дуэлях: _')
     elif json.loads(callback.data)[0] == 'deck':
@@ -213,13 +197,8 @@ def callback_message(callback):
         markup.row(show_epic)
         markup.row(show_legendary)
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
-        cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        number = 0
-        for i in user:
-            if i[0] == callback.message.chat.id:
-                number = i[1]
-                break
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        number = user[1]
         if number == 0:
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
         elif str(number)[-1] != '1':
@@ -229,16 +208,12 @@ def callback_message(callback):
     elif json.loads(callback.data)[0] == 'show_all':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        cards = {}
         do_not_have_cards = False
-        for i in user:
-            if i[0] == callback.message.chat.id:
-                if json.loads(i[2]):
-                    cards = json.loads(i[2])
-                else:
-                    do_not_have_cards = True
-                break
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        if json.loads(user[2]):
+            cards = json.loads(user[2])
+        else:
+            do_not_have_cards = True
         if not do_not_have_cards:
             markup = types.InlineKeyboardMarkup()
             items = list(map(lambda x: x[0], cards.items()))
@@ -258,17 +233,12 @@ def callback_message(callback):
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
     elif json.loads(callback.data)[0] == 'show_common':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
-        cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        cards = {}
         do_not_have_cards = False
-        for i in user:
-            if i[0] == callback.message.chat.id:
-                if json.loads(i[2]):
-                    cards = json.loads(i[2])
-                else:
-                    do_not_have_cards = True
-                break
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        if json.loads(user[2]):
+            cards = json.loads(user[2])
+        else:
+            do_not_have_cards = True
         if not do_not_have_cards:
             markup = types.InlineKeyboardMarkup()
             for i in cards.items():
@@ -290,16 +260,12 @@ def callback_message(callback):
     elif json.loads(callback.data)[0] == 'show_rare':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        cards = {}
         do_not_have_cards = False
-        for i in user:
-            if i[0] == callback.message.chat.id:
-                if json.loads(i[2]):
-                    cards = json.loads(i[2])
-                else:
-                    do_not_have_cards = True
-                break
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        if json.loads(user[2]):
+            cards = json.loads(user[2])
+        else:
+            do_not_have_cards = True
         if not do_not_have_cards:
             markup = types.InlineKeyboardMarkup()
             for i in cards.items():
@@ -320,17 +286,12 @@ def callback_message(callback):
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
     elif json.loads(callback.data)[0] == 'show_epic':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
-        cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        cards = {}
         do_not_have_cards = False
-        for i in user:
-            if i[0] == callback.message.chat.id:
-                if json.loads(i[2]):
-                    cards = json.loads(i[2])
-                else:
-                    do_not_have_cards = True
-                break
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        if json.loads(user[2]):
+            cards = json.loads(user[2])
+        else:
+            do_not_have_cards = True
         if not do_not_have_cards:
             markup = types.InlineKeyboardMarkup()
             for i in cards.items():
@@ -351,17 +312,12 @@ def callback_message(callback):
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
     elif json.loads(callback.data)[0] == 'show_legendary':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
-        cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        cards = {}
         do_not_have_cards = False
-        for i in user:
-            if i[0] == callback.message.chat.id:
-                if json.loads(i[2]):
-                    cards = json.loads(i[2])
-                else:
-                    do_not_have_cards = True
-                break
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        if json.loads(user[2]):
+            cards = json.loads(user[2])
+        else:
+            do_not_have_cards = True
         if not do_not_have_cards:
             markup = types.InlineKeyboardMarkup()
             for i in cards.items():
@@ -382,14 +338,9 @@ def callback_message(callback):
             bot.send_message(callback.message.chat.id, 'У тебя пока нет карт')
     elif json.loads(callback.data)[0] == 'next_card':
         item_num = int(json.loads(callback.data)[1])
-        cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        items, num = [], 0
-        for i in user:
-            if i[0] == callback.message.chat.id:
-                items = json.loads(i[4 + item_num])
-                num = int(i[9 + item_num])
-                break
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        items = json.loads(user[4 + item_num])
+        num = int(user[9 + item_num])
         if len(items) > 1:
             num += 1
             cur.execute("UPDATE users SET num_%i = '%i' WHERE id = '%i'" % (item_num, num, callback.message.chat.id))
@@ -407,14 +358,9 @@ def callback_message(callback):
             bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
     elif json.loads(callback.data)[0] == 'previous_card':
         item_num = int(json.loads(callback.data)[1])
-        cur.execute("SELECT * FROM users")
-        user = cur.fetchall()
-        items, num = [], 0
-        for i in user:
-            if i[0] == callback.message.chat.id:
-                items = json.loads(i[4 + item_num])
-                num = int(i[9 + item_num])
-                break
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        items = json.loads(user[4 + item_num])
+        num = int(user[9 + item_num])
         num -= 1
         cur.execute("UPDATE users SET num_%i = '%i' WHERE id = '%i'" % (item_num, num, callback.message.chat.id))
         conn.commit()

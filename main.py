@@ -1,3 +1,4 @@
+import time
 import telebot
 import sqlite3
 import json
@@ -9,45 +10,45 @@ from telebot import types
 bot = telebot.TeleBot('6887806463:AAGFV6FPhnLj6Iy1-jAHfjcb3BmP10YXZh0')
 bot.delete_webhook()
 all_cards = {
-    '1': ('Aston Martin Valkyrie (2018)', '2016 - 2019', '🇬🇧', '6.5 л / 1176 л.с. / бензин', 'legendary'),
-    '2': ('Mitsubishi Delica (1993)', '1968 - настоящее время', '🇯🇵', '2.5 л / 85 л.с. / дизель', 'common'),
-    '3': ('Fiat Nuova 500 (1966)', '1957 - 1975', '🇮🇹', '0.5 л / 17 л.с. / бензин', 'common'),
-    '4': ('Peugeot 208 (2014)', '2012 - настоящее время', '🇫🇷', '1.6 л / 92 л.с. / дизель', 'common'),
-    '5': ('Renault Captur (2016)', '2013 - настоящее время', '🇫🇷', '1.6 л / 114 л.с. / бензин', 'common'),
-    '6': ('Opel Astra (2014)', '1991 - настоящее время', '🇩🇪', '1.6 л / 115 л.с. / бензин', 'common'),
-    '7': ('Infinity Q30 (2019)', '2015 - 2019', '🇬🇧', '2.0 л / 211л.с. / бензин', 'rare'),
-    '8': ('Bugatti Veyron (2007)', '2005 - 2015', '🇫🇷', '8.0 л / 1001 л.с. / бензин', 'legendary'),
-    '9': ('Volvo XC60 (2019)', '2008 - настоящее время', '🇸🇪', '2.0 / 235 л.с./ дизель', 'rare'),
-    '10': ('Alfa Romeo Giulia II (2019)', '2015 - настоящее время', '🇮🇹', ' 2.0 л / 280 л.с. / бензин', 'rare'),
-    '11': ('Land Rover Defender 110 (1990)', '1983 - настоящее время', '🇬🇧', '2.5 л / 113 л.с. / дизель', 'common'),
-    '12': ('Škoda Karoq (2017)', '2017 - настоящее время', '🇨🇿', '1.4 / 150 л.с. / бензин', 'common'),
-    '13': ('Tesla Model S (2015)', '2012 - настоящее время', '🇺🇸', '515 кВт / электро', 'epic'),
-    '14': ('Ferrari F40 (1992)', '1987 - 1992', '🇮🇹', '2.9 л / 478 л.с. / бензин', 'legendary'),
-    '15': ('Lamborghini Huracán (2022)', '2014 - настоящее время', '🇮🇹', '5.2 л / 640 л.с. / бензин', 'legendary'),
-    '16': ('Range Rover Sport (2015)', '2005 - настоящее время', '🇬🇧', '4.4 л / 339 л.с./ дизель', 'epic'),
-    '17': ('Nissan X-Trail T32 (2013)', '2000 - настоящее время', '🇯🇵', '2.0 л / 144 л.с. / бензин', 'common'),
-    '18': ('Porsche 911 carrera 4S (2013)', '1963 - настоящее время', '🇩🇪', '3.8л / 400 л.с. / бензин', 'epic'),
-    '19': ('Maserati GrandTurismo (2013)', '2007 - настоящее время', '🇮🇹', '4.7 л / 460 л.с./ бензин', 'epic'),
-    '20': ('Mazda 3 (2018)', '2003 - настоящее время', '🇯🇵', '1.5 л / 120 л.с./ бензин', 'common'),
-    '21': ('Hyundai Solaris I рестайлинг (2014)', '2011 - настоящее время', '🇰🇷', '1.6л / 123 л.с. / бензин', 'common'),
-    '22': ('Lexus GS 300 (2018)', '1991 - 2020', '🇯🇵', '2.0л / 245 л.с. / бензин', 'rare'),
-    '23': ('Audi R8 V10 (2011)', '2007 - 2012', '🇩🇪', '5.2 / 525 л.с. / бензин', 'epic'),
-    '24': ('McLaren P1 (2015)', '2012 - 2017', '🇬🇧', '3.8л / 650 л.с. / бензин', 'legendary'),
-    '25': ('Bentley Mulsanne II (2010)', '2010 - 2020', '🇬🇧', '6.8 / 512 л.с. / бензин', 'epic'),
-    '26': ('BMW 3-й серии 325i (1986)', '1982 - 1994', '🇩🇪', '2.5 / 170 л.с. / бензин', 'common'),
-    '27': ('Mercedes-Benz S-Класс AMG 63 Long (2018)', '1999 - настоящее время', '🇩🇪', '4.0 л / 612 л.с. / бензин', 'epic'),
-    '28': ('Toyota Camry (2019)', '1980 - настоящее время', '🇯🇵', '3.5 л / 249 л.с. / бензин', 'common'),
-    '29': ('Toyota Supra A90 (2020)', '1986 - настоящее время', '🇯🇵', '3.0 л / 340 л.с. / бензин', 'epic'),
-    '30': ('Hummer H3 (2008)', '2005 - 2010', '🇺🇸', '5.3 л / 300 л.с. / бензин', 'rare'),
-    '31': ('Chevrolet Camaro VI (2016)', '2005 - 2018', '🇺🇸', '2.0 л / 275 л.с. / бензин', 'rare'),
-    '32': ('Mercedes-Benz AMG GT (2017)', '2014 - 2017', '🇩🇪', '4.0 л / 462 л.с. / бензин', 'epic'),
-    '33': ('Chevrolet Corvette (1993)', '1984 - 1998', '🇺🇸', '5.7 л / 300 л.с. / бензин', 'rare'),
-    '34': ('Chevrolet Corvette Zr1 (2018)', '2013 - 2019', '🇺🇸', '6.2 л / 466 л.с. / бензин', 'epic'),
-    '35': ('Ford Mustang (2005)', '2004 - 2009', '🇺🇸', '4.6 л / 315 л.с. / бензин', 'common'),
-    '36': ('Ford Mustang (2017)', '2014 - 2017', '🇺🇸', '2.3 л / 317 л.с. / бензин', 'rare'),
-    '37': ('Jeep Wrangler III (2011)', '2007 - 2018', '🇺🇸', '2.8 л / 200 л.с. / дизель', 'common'),
-    '38': ('BMW M2 F87 (2017)', '2015 - 2021', '🇩🇪', '3.0 л / 370 л.с. / бензин', 'epic'),
-    '39': ('Mercedes-Benz E-Класс (2018)', '1992 - настоящее время', '🇩🇪', '2.0 / 184 л.с. / бензин', 'epic')
+    '1': ('Aston Martin Valkyrie (2018)', '2016 - 2019', '🇬🇧', '6.5 л / 1176 л.с. / бензин', 'legendary', 1176),
+    '2': ('Mitsubishi Delica (1993)', '1968 - настоящее время', '🇯🇵', '2.5 л / 85 л.с. / дизель', 'common', 85),
+    '3': ('Fiat Nuova 500 (1966)', '1957 - 1975', '🇮🇹', '0.5 л / 17 л.с. / бензин', 'common', 17),
+    '4': ('Peugeot 208 (2014)', '2012 - настоящее время', '🇫🇷', '1.6 л / 92 л.с. / дизель', 'common', 92),
+    '5': ('Renault Captur (2016)', '2013 - настоящее время', '🇫🇷', '1.6 л / 114 л.с. / бензин', 'common', 114),
+    '6': ('Opel Astra (2014)', '1991 - настоящее время', '🇩🇪', '1.6 л / 115 л.с. / бензин', 'common', 115),
+    '7': ('Infinity Q30 (2019)', '2015 - 2019', '🇬🇧', '2.0 л / 211 л.с. / бензин', 'rare', 211),
+    '8': ('Bugatti Veyron (2007)', '2005 - 2015', '🇫🇷', '8.0 л / 1001 л.с. / бензин', 'legendary', 1001),
+    '9': ('Volvo XC60 (2019)', '2008 - настоящее время', '🇸🇪', '2.0 л / 235 л.с./ дизель', 'rare', 235),
+    '10': ('Alfa Romeo Giulia II (2019)', '2015 - настоящее время', '🇮🇹', ' 2.0 л / 280 л.с. / бензин', 'rare', 280),
+    '11': ('Land Rover Defender 110 (1990)', '1983 - настоящее время', '🇬🇧', '2.5 л / 113 л.с. / дизель', 'common', 113),
+    '12': ('Škoda Karoq (2017)', '2017 - настоящее время', '🇨🇿', '1.4 л / 150 л.с. / бензин', 'common', 150),
+    '13': ('Tesla Model S (2015)', '2012 - настоящее время', '🇺🇸', '515 кВт / электро', 'epic', 515),
+    '14': ('Ferrari F40 (1992)', '1987 - 1992', '🇮🇹', '2.9 л / 478 л.с. / бензин', 'legendary', 478),
+    '15': ('Lamborghini Huracán (2022)', '2014 - настоящее время', '🇮🇹', '5.2 л / 640 л.с. / бензин', 'legendary', 640),
+    '16': ('Range Rover Sport (2015)', '2005 - настоящее время', '🇬🇧', '4.4 л / 339 л.с./ дизель', 'epic', 339),
+    '17': ('Nissan X-Trail T32 (2013)', '2000 - настоящее время', '🇯🇵', '2.0 л / 144 л.с. / бензин', 'common', 144),
+    '18': ('Porsche 911 carrera 4S (2013)', '1963 - настоящее время', '🇩🇪', '3.8 л / 400 л.с. / бензин', 'epic', 400),
+    '19': ('Maserati GrandTurismo (2013)', '2007 - настоящее время', '🇮🇹', '4.7 л / 460 л.с./ бензин', 'epic', 460),
+    '20': ('Mazda 3 (2018)', '2003 - настоящее время', '🇯🇵', '1.5 л / 120 л.с./ бензин', 'common', 120),
+    '21': ('Hyundai Solaris I рестайлинг (2014)', '2011 - настоящее время', '🇰🇷', '1.6 л / 123 л.с. / бензин', 'common', 123),
+    '22': ('Lexus GS 300 (2018)', '1991 - 2020', '🇯🇵', '2.0 л / 245 л.с. / бензин', 'rare', 245),
+    '23': ('Audi R8 V10 (2011)', '2007 - 2012', '🇩🇪', '5.2 л / 525 л.с. / бензин', 'epic', 525),
+    '24': ('McLaren P1 (2015)', '2012 - 2017', '🇬🇧', '3.8 л / 650 л.с. / бензин', 'legendary', 650),
+    '25': ('Bentley Mulsanne II (2010)', '2010 - 2020', '🇬🇧', '6.8 л / 512 л.с. / бензин', 'epic', 512),
+    '26': ('BMW 3-й серии 325i (1986)', '1982 - 1994', '🇩🇪', '2.5 л / 170 л.с. / бензин', 'common', 170),
+    '27': ('Mercedes-Benz S-Класс AMG 63 Long (2018)', '1999 - настоящее время', '🇩🇪', '4.0 л / 612 л.с. / бензин', 'epic', 612),
+    '28': ('Toyota Camry (2019)', '1980 - настоящее время', '🇯🇵', '3.5 л / 249 л.с. / бензин', 'common', 249),
+    '29': ('Toyota Supra A90 (2020)', '1986 - настоящее время', '🇯🇵', '3.0 л / 340 л.с. / бензин', 'epic', 340),
+    '30': ('Hummer H3 (2008)', '2005 - 2010', '🇺🇸', '5.3 л / 300 л.с. / бензин', 'rare', 300),
+    '31': ('Chevrolet Camaro VI (2016)', '2005 - 2018', '🇺🇸', '2.0 л / 275 л.с. / бензин', 'rare', 275),
+    '32': ('Mercedes-Benz AMG GT (2017)', '2014 - 2017', '🇩🇪', '4.0 л / 462 л.с. / бензин', 'epic', 462),
+    '33': ('Chevrolet Corvette (1993)', '1984 - 1998', '🇺🇸', '5.7 л / 300 л.с. / бензин', 'rare', 300),
+    '34': ('Chevrolet Corvette Zr1 (2018)', '2013 - 2019', '🇺🇸', '6.2 л / 466 л.с. / бензин', 'epic', 466),
+    '35': ('Ford Mustang (2005)', '2004 - 2009', '🇺🇸', '4.6 л / 315 л.с. / бензин', 'common', 315),
+    '36': ('Ford Mustang (2017)', '2014 - 2017', '🇺🇸', '2.3 л / 317 л.с. / бензин', 'rare', 317),
+    '37': ('Jeep Wrangler III (2011)', '2007 - 2018', '🇺🇸', '2.8 л / 200 л.с. / дизель', 'common', 200),
+    '38': ('BMW M2 F87 (2017)', '2015 - 2021', '🇩🇪', '3.0 л / 370 л.с. / бензин', 'epic', 370),
+    '39': ('Mercedes-Benz E-Класс (2018)', '1992 - настоящее время', '🇩🇪', '2.0 л / 184 л.с. / бензин', 'epic', 184)
 
 }
 for_random = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39']
@@ -95,11 +96,11 @@ def time_conversion(sec):
 def start(message):
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
-    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int, duel_wins int, influence_points int, card_cooldown_level int)')
+    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int, duel_wins int, influence_points int, card_cooldown_level int, dueling_with_id int, dueling_with_card VARCHAR)')
     conn.commit()
     if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE id = '%i')" % message.from_user.id).fetchone()[0] == 0:
         now = datetime.datetime.now()
-        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 1))
+        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level, dueling_with_id, dueling_with_card) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%i', '%s')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 1, 0, '0'))
         conn.commit()
     cur.close()
     conn.close()
@@ -130,7 +131,8 @@ def on_click(message):
         cards = json.loads(user[2])
         last_time = datetime.datetime(*json.loads(user[4]))
         cooldown_lvl = int(user[19])
-        if (datetime.datetime.now() - last_time).seconds >= time_for_cooldown_lvls[cooldown_lvl - 1]:
+        # time_for_cooldown_lvls[cooldown_lvl - 1]
+        if (datetime.datetime.now() - last_time).seconds >= 1:
             card_num = random.choices(for_random, weights=rarities)[0]
             card = all_cards[str(card_num)]
             rarity_of_card = rarity_test(card)
@@ -149,7 +151,8 @@ def on_click(message):
             cur.execute("UPDATE users SET last_time = '%s' WHERE id = '%i'" % (json.dumps([now.year, now.month, now.day, now.hour, now.minute, now.second]), message.chat.id))
             conn.commit()
         else:
-            bot.send_message(message.chat.id, f'До следующей попытки {time_conversion(time_for_cooldown_lvls[cooldown_lvl - 1] - (datetime.datetime.now() - last_time).seconds)}')
+            # time_for_cooldown_lvls[cooldown_lvl - 1]
+            bot.send_message(message.chat.id, f'До следующей попытки {time_conversion(1 - (datetime.datetime.now() - last_time).seconds)}')
     elif message.text == 'Главное меню 🏠':
         markup = types.InlineKeyboardMarkup()
         prof = types.InlineKeyboardButton('Профиль 👤', callback_data=json.dumps(['profile', '']))
@@ -167,7 +170,6 @@ def on_click(message):
 
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_message(callback):
-    num, msg, items = 0, '', []
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
     if json.loads(callback.data)[0] == 'profile':
@@ -202,6 +204,7 @@ def callback_message(callback):
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         do_not_have_cards = False
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        cards = set()
         if json.loads(user[2]):
             cards = json.loads(user[2])
         else:
@@ -226,7 +229,9 @@ def callback_message(callback):
     elif json.loads(callback.data)[0] == 'show_common':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         do_not_have_cards = False
+        items = []
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        cards = set()
         if json.loads(user[2]):
             cards = json.loads(user[2])
         else:
@@ -253,7 +258,9 @@ def callback_message(callback):
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         cur.execute("SELECT * FROM users")
         do_not_have_cards = False
+        items = []
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        cards = set()
         if json.loads(user[2]):
             cards = json.loads(user[2])
         else:
@@ -279,7 +286,9 @@ def callback_message(callback):
     elif json.loads(callback.data)[0] == 'show_epic':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         do_not_have_cards = False
+        items = []
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        cards = set()
         if json.loads(user[2]):
             cards = json.loads(user[2])
         else:
@@ -305,7 +314,9 @@ def callback_message(callback):
     elif json.loads(callback.data)[0] == 'show_legendary':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         do_not_have_cards = False
+        items = []
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        cards = set()
         if json.loads(user[2]):
             cards = json.loads(user[2])
         else:
@@ -332,28 +343,25 @@ def callback_message(callback):
         item_num = int(json.loads(callback.data)[1])
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
         items = json.loads(user[4 + item_num])
-        num = int(user[9 + item_num])
-        if len(items) > 1:
-            num += 1
-            cur.execute("UPDATE users SET num_%i = '%i' WHERE id = '%i'" % (item_num, num, callback.message.chat.id))
-            conn.commit()
-            markup = types.InlineKeyboardMarkup()
-            number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
-            if num + 1 != len(items):
-                next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card', item_num]))
-                previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card', item_num]))
-                markup.row(previous_card, number_of_card, next_card)
-            else:
-                previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card', item_num]))
-                markup.row(previous_card, number_of_card)
-            file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'), caption=all_cards[str(items[num])][0])
-            bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
+        num = int(user[9 + item_num]) + 1
+        cur.execute("UPDATE users SET num_%i = '%i' WHERE id = '%i'" % (item_num, num, callback.message.chat.id))
+        conn.commit()
+        markup = types.InlineKeyboardMarkup()
+        number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
+        if num + 1 != len(items):
+            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card', item_num]))
+            previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card', item_num]))
+            markup.row(previous_card, number_of_card, next_card)
+        else:
+            previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card', item_num]))
+            markup.row(previous_card, number_of_card)
+        file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'), caption=all_cards[str(items[num])][0])
+        bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
     elif json.loads(callback.data)[0] == 'previous_card':
         item_num = int(json.loads(callback.data)[1])
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
         items = json.loads(user[4 + item_num])
-        num = int(user[9 + item_num])
-        num -= 1
+        num = int(user[9 + item_num]) - 1
         cur.execute("UPDATE users SET num_%i = '%i' WHERE id = '%i'" % (item_num, num, callback.message.chat.id))
         conn.commit()
         markup = types.InlineKeyboardMarkup()
@@ -368,47 +376,183 @@ def callback_message(callback):
         file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'),caption=all_cards[str(items[num])][0])
         bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
     elif json.loads(callback.data)[0] == 'duel':
-        markup = types.InlineKeyboardMarkup()
-        cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
-        markup.add(cancel)
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
-        bot.send_message(callback.message.chat.id, '🏎 Введи @username пользователя, с которым хочешь начать дуэль', reply_markup=markup)
-        bot.register_next_step_handler(callback.message, duels)
+        if int(user[1]) == 0: bot.send_message(callback.message.chat.id, 'У тебя ещё нет карт, чтобы учавстовать в дуэлях тебе нужна хотя бы одна карта')
+        else:
+            markup = types.InlineKeyboardMarkup()
+            cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
+            markup.add(cancel)
+            bot.send_message(callback.message.chat.id, '🏎 Введи @username пользователя, с которым хочешь начать дуэль', reply_markup=markup)
+            bot.clear_step_handler_by_chat_id(callback.message.chat.id)
+            bot.register_next_step_handler(callback.message, duels)
     elif json.loads(callback.data)[0] == 'cancel':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.clear_step_handler_by_chat_id(callback.message.chat.id)
         bot.register_next_step_handler(callback.message, on_click)
     elif json.loads(callback.data)[0] == 'accept':
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.send_message(int(json.loads(callback.data)[1]), f'✅ {json.loads(callback.data)[3]} принял твое предложение')
         id1 = int(json.loads(callback.data)[1])
         id2 = int(json.loads(callback.data)[2])
+        cur.execute("UPDATE users SET dueling_with_id = '%i' WHERE id = '%i'" % (id2, id1))
+        conn.commit()
+        cur.execute("UPDATE users SET dueling_with_id = '%i' WHERE id = '%i'" % (id1, id2))
+        conn.commit()
         user1 = cur.execute("SELECT * FROM users WHERE id = '%i'" % id1).fetchone()
         user2 = cur.execute("SELECT * FROM users WHERE id = '%i'" % id2).fetchone()
-        do_not_have_cards1 = False
-        do_not_have_cards2 = False
-        if json.loads(user1[2]):
-            cards = json.loads(user1[2])
+        cards = json.loads(user1[2])
+        markup = types.InlineKeyboardMarkup()
+        items = list(map(lambda x: x[0], cards.items()))
+        num = 0
+        number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
+        choose = types.InlineKeyboardButton('👉 Выбрать карту для дуэли', callback_data=json.dumps(['choose', num]))
+        leave = types.InlineKeyboardButton('🚪 Выйти из дуэли', callback_data=json.dumps(['leave_duel', '']))
+        if len(items) > 1:
+            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_duel', '']))
+            markup.row(number_of_card, next_card)
         else:
-            do_not_have_cards1 = True
-        if not do_not_have_cards1:
-            markup = types.InlineKeyboardMarkup()
-            items = list(map(lambda x: x[0], cards.items()))
-            num = 0
-            number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
-            if len(items) > 1:
-                next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_duel', '1']))
-                markup.row(number_of_card, next_card)
-            else:
-                markup.add(number_of_card)
-            bot.send_photo(id1, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
-            cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
-            conn.commit()
-            cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
-            conn.commit()
+            markup.row(number_of_card)
+        markup.row(choose)
+        markup.row(leave)
+        msg1 = bot.send_photo(id1, open(f'./{items[num]}.jpg', 'rb'), f'{all_cards[str(items[num])][0]}\nДвигатель: {all_cards[str(items[num])][3]}', reply_markup=markup)
+        cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, id1))
+        conn.commit()
+        cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), id1))
+        conn.commit()
+        cards = json.loads(user2[2])
+        markup = types.InlineKeyboardMarkup()
+        items = list(map(lambda x: x[0], cards.items()))
+        num = 0
+        number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
+        choose = types.InlineKeyboardButton('👉 Выбрать карту для дуэли', callback_data=json.dumps(['choose', num]))
+        leave = types.InlineKeyboardButton('🚪 Выйти из дуэли', callback_data=json.dumps(['leave_duel', '']))
+        if len(items) > 1:
+            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_duel', '']))
+            markup.row(number_of_card, next_card)
         else:
-            bot.send_message(id1, 'У тебя нет карт')
+            markup.row(number_of_card)
+        markup.row(choose)
+        markup.row(leave)
+        msg2 = bot.send_photo(id2, open(f'./{items[num]}.jpg', 'rb'), f'{all_cards[str(items[num])][0]}\nДвигатель: {all_cards[str(items[num])][3]}', reply_markup=markup)
+        cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, id2))
+        conn.commit()
+        cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), id2))
+        conn.commit()
     elif json.loads(callback.data)[0] == 'decline':
-        bot.send_message(int(json.loads(callback.data)[1]), f'❌ {json.loads(callback.data)[2]} отклонил твое предложение')
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        msg = bot.send_message(int(json.loads(callback.data)[1]), f'❌ {json.loads(callback.data)[2]} отклонил твое предложение')
+        bot.clear_step_handler_by_chat_id(int(json.loads(callback.data)[1]))
+        bot.register_next_step_handler(msg, on_click)
+        bot.clear_step_handler_by_chat_id(callback.message.chat.id)
+        bot.register_next_step_handler(callback.message, on_click)
+    elif json.loads(callback.data)[0] == 'next_card_duel':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        items = json.loads(user[5])
+        num = int(user[10]) + 1
+        cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
+        conn.commit()
+        markup = types.InlineKeyboardMarkup()
+        number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
+        choose = types.InlineKeyboardButton('👉 Выбрать карту для дуэли', callback_data=json.dumps(['choose', num]))
+        leave = types.InlineKeyboardButton('🚪 Выйти из дуэли', callback_data=json.dumps(['leave_duel', '']))
+        if num + 1 != len(items):
+            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_duel', '']))
+            previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card_duel', '']))
+            markup.row(previous_card, number_of_card, next_card)
+        else:
+            previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card', '']))
+            markup.row(previous_card, number_of_card)
+        markup.row(choose)
+        markup.row(leave)
+        file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'), caption=f'{all_cards[str(items[num])][0]}\nДвигатель: {all_cards[str(items[num])][3]}')
+        bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
+    elif json.loads(callback.data)[0] == 'previous_card_duel':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        items = json.loads(user[5])
+        num = int(user[10]) - 1
+        cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
+        conn.commit()
+        markup = types.InlineKeyboardMarkup()
+        number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
+        choose = types.InlineKeyboardButton('👉 Выбрать карту для дуэли', callback_data=json.dumps(['choose', num]))
+        leave = types.InlineKeyboardButton('🚪 Выйти из дуэли', callback_data=json.dumps(['leave_duel', '']))
+        if num != 0:
+            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_duel', '']))
+            previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card_duel', '']))
+            markup.row(previous_card, number_of_card, next_card)
+        else:
+            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card', '']))
+            markup.row(number_of_card, next_card)
+        markup.row(choose)
+        markup.row(leave)
+        file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'),caption=f'{all_cards[str(items[num])][0]}\nДвигатель: {all_cards[str(items[num])][3]}')
+        bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
+    elif json.loads(callback.data)[0] == 'choose':
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        user1 = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        id2 = int(user1[20])
+        user2 = cur.execute("SELECT * FROM users WHERE id = '%i'" % id2).fetchone()
+        card = json.loads(user1[5])[int(json.loads(callback.data)[1])]
+        cur.execute("UPDATE users SET dueling_with_card = '%s' WHERE id = '%i'" % (card, callback.message.chat.id))
+        conn.commit()
+        markup = types.InlineKeyboardMarkup()
+        leave = types.InlineKeyboardButton('🚪 Выйти из дуэли', callback_data=json.dumps(['leave_duel', '']))
+        markup.add(leave)
+        bot.send_photo(callback.message.chat.id, open(f'./{card}.jpg', 'rb'), f'<b>Ты выбрал</b>\n{all_cards[card][0]}\nДвигатель: {all_cards[card][3]}', parse_mode='html', reply_markup=markup)
+        if user2[21] != '0':
+            card2 = user2[21]
+            msg1 = bot.send_photo(callback.message.chat.id, open(f'./{card2}.jpg', 'rb'), f'<b>Твой противник выбрал</b>\n{all_cards[card2][0]}\nДвигатель: {all_cards[card2][3]}', parse_mode='html')
+            msg2 = bot.send_photo(id2, open(f'./{card}.jpg', 'rb'), f'<b>Твой противник выбрал</b>\n{all_cards[card][0]}\nДвигатель: {all_cards[card][3]}', parse_mode='html')
+            bot.send_message(callback.message.chat.id, 'Гонка началась')
+            bot.send_message(id2, 'Гонка началась')
+            power1 = all_cards[card][5] * user1[16]
+            power2 = all_cards[card2][5] * user2[16]
+            chances = [50, 50]
+            if power1 > power2 : chances = [100 - (power2 / power1) * 100, power2 / power1 * 100]
+            elif power1 < power2: chances = [100 - (power1 / power2) * 100, power1 / power2 * 100]
+            participants = [1, 2]
+            winner = random.choices(participants, k=1, weights=chances)
+            msg1 = bot.send_message(callback.message.chat.id, 'Гонка закончится через 5...')
+            msg2 = bot.send_message(id2, 'Гонка закончится через 5...')
+            for i in range(4, 1):
+                time.sleep(1000)
+                bot.edit_message_text(chat_id=callback.message.chat.id, message_id=msg1.message_id, text=f'{i}...')
+                bot.edit_message_text(chat_id=id2, message_id=msg2.message_id, text=f'{i}...')
+            bot.delete_message(callback.message.chat.id, msg1.message_id)
+            bot.delete_message(id2, msg2.message_id)
+            if winner == 1: win_username = user1[15]
+            else: win_username = user2[15]
+            bot.send_message(callback.message.chat.id, f'<b>Победил</b> {win_username}', parse_mode='html')
+            msg = bot.send_message(id2, f'<b>Победил</b> {win_username}', parse_mode='html')
+            cur.execute("UPDATE users SET dueling_with_id = '%i' WHERE id = '%i'" % (0, callback.message.chat.id))
+            conn.commit()
+            cur.execute("UPDATE users SET dueling_with_card = '%s' WHERE id = '%i'" % ('0', callback.message.chat.id))
+            conn.commit()
+            cur.execute("UPDATE users SET dueling_with_id = '%i' WHERE id = '%i'" % (0, id2))
+            conn.commit()
+            cur.execute("UPDATE users SET dueling_with_card = '%s' WHERE id = '%i'" % ('0', id2))
+            conn.commit()
+            bot.register_next_step_handler(callback.message, on_click)
+            bot.register_next_step_handler(msg, on_click)
+    elif json.loads(callback.data)[0] == 'leave_duel':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        id2 = int(user[20])
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        cur.execute("UPDATE users SET dueling_with_id = '%i' WHERE id = '%i'" % (0, int(user[0])))
+        conn.commit()
+        cur.execute("UPDATE users SET dueling_with_card = '%s' WHERE id = '%i'" % ('0', int(user[0])))
+        conn.commit()
+        cur.execute("UPDATE users SET dueling_with_id = '%i' WHERE id = '%i'" % (0, id2))
+        conn.commit()
+        cur.execute("UPDATE users SET dueling_with_card = '%s' WHERE id = '%i'" % ('0', id2))
+        conn.commit()
+        bot.register_next_step_handler(callback.message, on_click)
+        msg = bot.send_message(id2, 'Твой оппонент вышел из дуэли')
+        del_id = msg.message_id - 1
+        print(del_id)
+        bot.delete_message(id2, del_id)
+        bot.register_next_step_handler(msg, on_click)
     elif json.loads(callback.data)[0] == 'shop':
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
         influence_points = int(user[18])
@@ -478,21 +622,36 @@ def callback_message(callback):
 def duels(message):
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
+    bot.delete_message(message.chat.id, message.message_id - 1)
     if message.text[0] == '@':
         if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE username = '%s')" % message.text).fetchone()[0]:
-            user = cur.execute("SELECT * FROM users WHERE username = '%s')" % message.text).fetchone()
-            ida = int(user[0])
-            markup = types.InlineKeyboardMarkup()
-            accept = types.InlineKeyboardButton('✅ Принять', callback_data=json.dumps(['accept', message.from_user.id, ida, message.text]))
-            decline = types.InlineKeyboardButton('❌ Отклонить', callback_data=json.dumps(['decline', message.from_user.id, message.text]))
-            markup.row(accept, decline)
-            bot.send_message(ida, f'❗️ Пользователь {message.from_user.username} предложил вам провести дуэль', reply_markup=markup)
+            user = cur.execute("SELECT * FROM users WHERE username = '%s'" % message.text).fetchone()
+            if int(user[1]) == 0:
+                bot.send_message(message.chat.id, 'У этого пользователя ещё нет карт')
+                bot.register_next_step_handler(message, on_click)
+            else:
+                ida = int(user[0])
+                markup = types.InlineKeyboardMarkup()
+                accept = types.InlineKeyboardButton('✅ Принять', callback_data=json.dumps(['accept', message.from_user.id, ida, message.text]))
+                decline = types.InlineKeyboardButton('❌ Отклонить', callback_data=json.dumps(['decline', message.from_user.id, message.text]))
+                markup.row(accept, decline)
+                bot.send_message(ida, f'❗️ Пользователь {message.from_user.username} предложил вам провести дуэль', reply_markup=markup)
+                bot.clear_step_handler_by_chat_id(ida)
+                markup = types.InlineKeyboardMarkup()
+                cancel_offer = types.InlineKeyboardButton('🚫 Отменить предложение', callback_data=json.dumps(['cancel_offer', ida]))
+                markup.add(cancel_offer)
+                bot.send_message(message.chat.id, 'Предложение успешно отправлено', reply_markup=markup)
         else:
             bot.send_message(message.chat.id, 'Пользователь с таким @username ещё ни разу не запускал эту игру(')
+            bot.register_next_step_handler(message, on_click)
     else:
-        bot.send_message(message.chat.id, 'Ты ввёл @username неправильно, попробуй ещё раз, возможно ты забыл знак @')
+        markup = types.InlineKeyboardMarkup()
+        cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
+        markup.add(cancel)
+        bot.send_message(message.chat.id, 'Ты ввёл @username неправильно, попробуй ещё раз, возможно ты забыл знак @', reply_markup=markup)
         bot.register_next_step_handler(message, duels)
     cur.close()
     conn.close()
+
 
 bot.polling(none_stop=True)

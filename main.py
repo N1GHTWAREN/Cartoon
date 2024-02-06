@@ -54,6 +54,7 @@ for_random = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13
 rarities = (1, 3.928, 3.928, 3.928, 3.928, 3.928, 3.75, 1, 3.75, 3.75, 3.928, 3.928, 0.833, 1, 1, 0.833, 3.928, 0.833, 0.833, 3.928, 3.928, 3.75, 0.833, 1, 0.833, 3.928, 0.833, 3.928, 0.833, 3.75, 3.75, 0.833, 3.75, 0.833, 3.928, 3.75, 3.928, 0.833, 0.833)
 skill_prices = [1000, 3000, 5000, 10000, 15000, 25000, 35000, 50000, 75000]
 cooldown_prices = [100000, 200000]
+time_for_cooldown_lvls = [14400, 10800, 7200]
 
 
 def rarity_test(card):
@@ -98,7 +99,7 @@ def start(message):
     conn.commit()
     if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE id = '%i')" % message.from_user.id).fetchone()[0] == 0:
         now = datetime.datetime.now()
-        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 0))
+        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 1))
         conn.commit()
     cur.close()
     conn.close()
@@ -128,8 +129,8 @@ def on_click(message):
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % message.from_user.id).fetchone()
         cards = json.loads(user[2])
         last_time = datetime.datetime(*json.loads(user[4]))
-        # 14400
-        if (datetime.datetime.now() - last_time).seconds >= 1:
+        cooldown_lvl = int(user[19])
+        if (datetime.datetime.now() - last_time).seconds >= time_for_cooldown_lvls[cooldown_lvl - 1]:
             card_num = random.choices(for_random, weights=rarities)[0]
             card = all_cards[str(card_num)]
             rarity_of_card = rarity_test(card)
@@ -148,8 +149,7 @@ def on_click(message):
             cur.execute("UPDATE users SET last_time = '%s' WHERE id = '%i'" % (json.dumps([now.year, now.month, now.day, now.hour, now.minute, now.second]), message.chat.id))
             conn.commit()
         else:
-            # 14400
-            bot.send_message(message.chat.id, f'До следующей попытки {time_conversion(1 - (datetime.datetime.now() - last_time).seconds)}')
+            bot.send_message(message.chat.id, f'До следующей попытки {time_conversion(time_for_cooldown_lvls[cooldown_lvl - 1] - (datetime.datetime.now() - last_time).seconds)}')
     elif message.text == 'Главное меню 🏠':
         markup = types.InlineKeyboardMarkup()
         prof = types.InlineKeyboardButton('Профиль 👤', callback_data=json.dumps(['profile', '']))
@@ -401,7 +401,7 @@ def callback_message(callback):
             buy = types.InlineKeyboardButton('✅ Приобрести улучшение', callback_data=json.dumps(['buy_skill', '']))
             cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
             markup.add(buy, cancel)
-            bot.send_message(callback.message.chat.id, f'Купить улучшение навыка вождения до {driving_skill + 1} уровня за {skill_prices[driving_skill - 1]} очков влияния', reply_markup=markup)
+            bot.send_message(callback.message.chat.id, f'🆙 Улучшение навыка вождения до {driving_skill + 1} уровня за {skill_prices[driving_skill - 1]} очков влияния', reply_markup=markup)
         else:
             bot.send_message(callback.message.chat.id, 'У тебя максимальный навык вождения')
     elif json.loads(callback.data)[0] == 'up_time':
@@ -412,7 +412,39 @@ def callback_message(callback):
             buy = types.InlineKeyboardButton('✅ Приобрести улучшение', callback_data=json.dumps(['buy_cooldown', '']))
             cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
             markup.add(buy, cancel)
-            bot.send_message(callback.message.chat.id, f'Купить улучшение навыка вождения до {cooldown_level + 1} уровня за {cooldown_prices[cooldown_level - 1]} очков влияния', reply_markup=markup)
+            bot.send_message(callback.message.chat.id, f'⏱️ Уменьшение времени между получением новых карт до {cooldown_level + 1} уровня за {cooldown_prices[cooldown_level - 1]} очков влияния', reply_markup=markup)
+        else:
+            bot.send_message(callback.message.chat.id, 'У тебя максимальный уровень уменьшения времени между получением новых карт')
+    elif json.loads(callback.data)[0] == 'buy_skill':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        driving_skill = int(user[16])
+        influence_points = int(user[18])
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        if influence_points >= skill_prices[driving_skill - 1]:
+            influence_points -= skill_prices[driving_skill - 1]
+            driving_skill += 1
+            cur.execute("UPDATE users SET influence_points = '%i' WHERE id = '%i'" % (influence_points, callback.message.chat.id))
+            conn.commit()
+            cur.execute("UPDATE users SET driving_skill = '%i' WHERE id = '%i'" % (driving_skill, callback.message.chat.id))
+            conn.commit()
+            bot.send_message(callback.message.chat.id, f'✅ Улучшение навыка вождения до {driving_skill} уровня успешно приобретено')
+        else:
+            bot.send_message(callback.message.chat.id, f'У тебя не хватает очков влияния для покупки этого улучшения, тебе нужно ещё {skill_prices[driving_skill - 1] - influence_points}')
+    elif json.loads(callback.data)[0] == 'buy_cooldown':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        card_cooldown_level = int(user[16])
+        influence_points = int(user[18])
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        if influence_points >= cooldown_prices[card_cooldown_level - 1]:
+            influence_points -= cooldown_prices[card_cooldown_level - 1]
+            card_cooldown_level += 1
+            cur.execute("UPDATE users SET influence_points = '%i' WHERE id = '%i'" % (influence_points, callback.message.chat.id))
+            conn.commit()
+            cur.execute("UPDATE users SET card_cooldown_level = '%i' WHERE id = '%i'" % (card_cooldown_level, callback.message.chat.id))
+            conn.commit()
+            bot.send_message(callback.message.chat.id, f'✅ Улучшение навыка вождения до {card_cooldown_level} уровня успешно приобретено')
+        else:
+            bot.send_message(callback.message.chat.id, f'У тебя не хватает очков влияния для покупки этого улучшения, тебе нужно ещё {cooldown_prices[card_cooldown_level - 1] - influence_points}')
     cur.close()
     conn.close()
 

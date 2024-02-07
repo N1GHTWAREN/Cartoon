@@ -96,11 +96,11 @@ def time_conversion(sec):
 def start(message):
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
-    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int, duel_wins int, influence_points int, card_cooldown_level int, dueling_with_id int, dueling_with_card VARCHAR)')
+    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int, duel_wins int, influence_points int, card_cooldown_level int, dueling_with_id int, dueling_with_card VARCHAR, msg_to_delete int)')
     conn.commit()
     if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE id = '%i')" % message.from_user.id).fetchone()[0] == 0:
         now = datetime.datetime.now()
-        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level, dueling_with_id, dueling_with_card) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%i', '%s')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 1, 0, '0'))
+        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level, dueling_with_id, dueling_with_card, msg_to_delete) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 1, 0, '0', 0))
         conn.commit()
     cur.close()
     conn.close()
@@ -420,6 +420,8 @@ def callback_message(callback):
         conn.commit()
         cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), id1))
         conn.commit()
+        cur.execute("UPDATE users SET msg_to_delete = '%i' WHERE id = '%i'" % (msg1.message_id, id1))
+        conn.commit()
         cards = json.loads(user2[2])
         markup = types.InlineKeyboardMarkup()
         items = list(map(lambda x: x[0], cards.items()))
@@ -438,6 +440,8 @@ def callback_message(callback):
         cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, id2))
         conn.commit()
         cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), id2))
+        conn.commit()
+        cur.execute("UPDATE users SET msg_to_delete = '%i' WHERE id = '%i'" % (msg2.message_id, id2))
         conn.commit()
     elif json.loads(callback.data)[0] == 'decline':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
@@ -461,7 +465,7 @@ def callback_message(callback):
             previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card_duel', '']))
             markup.row(previous_card, number_of_card, next_card)
         else:
-            previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card', '']))
+            previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card_duel', '']))
             markup.row(previous_card, number_of_card)
         markup.row(choose)
         markup.row(leave)
@@ -482,7 +486,7 @@ def callback_message(callback):
             previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card_duel', '']))
             markup.row(previous_card, number_of_card, next_card)
         else:
-            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card', '']))
+            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_duel', '']))
             markup.row(number_of_card, next_card)
         markup.row(choose)
         markup.row(leave)
@@ -536,12 +540,13 @@ def callback_message(callback):
             bot.register_next_step_handler(callback.message, on_click)
             bot.register_next_step_handler(msg, on_click)
     elif json.loads(callback.data)[0] == 'leave_duel':
-        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
-        id2 = int(user[20])
+        user1 = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        id2 = int(user1[20])
+        user2 = cur.execute("SELECT * FROM users WHERE id = '%i'" % id2).fetchone()
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
-        cur.execute("UPDATE users SET dueling_with_id = '%i' WHERE id = '%i'" % (0, int(user[0])))
+        cur.execute("UPDATE users SET dueling_with_id = '%i' WHERE id = '%i'" % (0, callback.message.chat.id))
         conn.commit()
-        cur.execute("UPDATE users SET dueling_with_card = '%s' WHERE id = '%i'" % ('0', int(user[0])))
+        cur.execute("UPDATE users SET dueling_with_card = '%s' WHERE id = '%i'" % ('0', callback.message.chat.id))
         conn.commit()
         cur.execute("UPDATE users SET dueling_with_id = '%i' WHERE id = '%i'" % (0, id2))
         conn.commit()
@@ -549,8 +554,7 @@ def callback_message(callback):
         conn.commit()
         bot.register_next_step_handler(callback.message, on_click)
         msg = bot.send_message(id2, 'Твой оппонент вышел из дуэли')
-        del_id = msg.message_id - 1
-        print(del_id)
+        del_id = int(user2[22])
         bot.delete_message(id2, del_id)
         bot.register_next_step_handler(msg, on_click)
     elif json.loads(callback.data)[0] == 'shop':

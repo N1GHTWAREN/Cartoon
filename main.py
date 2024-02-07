@@ -502,8 +502,8 @@ def callback_message(callback):
         bot.send_photo(callback.message.chat.id, open(f'./{card}.jpg', 'rb'), f'<b>Ты выбрал</b>\n{all_cards[card][0]}\nДвигатель: {all_cards[card][3]}', parse_mode='html', reply_markup=markup)
         if user2[21] != '0':
             card2 = user2[21]
-            msg1 = bot.send_photo(callback.message.chat.id, open(f'./{card2}.jpg', 'rb'), f'<b>Твой противник выбрал</b>\n{all_cards[card2][0]}\nДвигатель: {all_cards[card2][3]}', parse_mode='html')
-            msg2 = bot.send_photo(id2, open(f'./{card}.jpg', 'rb'), f'<b>Твой противник выбрал</b>\n{all_cards[card][0]}\nДвигатель: {all_cards[card][3]}', parse_mode='html')
+            bot.send_photo(callback.message.chat.id, open(f'./{card2}.jpg', 'rb'), f'<b>Твой противник выбрал</b>\n{all_cards[card2][0]}\nДвигатель: {all_cards[card2][3]}', parse_mode='html')
+            bot.send_photo(id2, open(f'./{card}.jpg', 'rb'), f'<b>Твой противник выбрал</b>\n{all_cards[card][0]}\nДвигатель: {all_cards[card][3]}', parse_mode='html')
             bot.send_message(callback.message.chat.id, 'Гонка началась')
             bot.send_message(id2, 'Гонка началась')
             power1 = all_cards[card][5] * user1[16]
@@ -515,10 +515,10 @@ def callback_message(callback):
             winner = random.choices(participants, k=1, weights=chances)
             msg1 = bot.send_message(callback.message.chat.id, 'Гонка закончится через 5...')
             msg2 = bot.send_message(id2, 'Гонка закончится через 5...')
-            for i in range(4, 1):
-                time.sleep(1000)
-                bot.edit_message_text(chat_id=callback.message.chat.id, message_id=msg1.message_id, text=f'{i}...')
-                bot.edit_message_text(chat_id=id2, message_id=msg2.message_id, text=f'{i}...')
+            for i in range(4, 0, -1):
+                time.sleep(1.0)
+                bot.edit_message_text(chat_id=callback.message.chat.id, message_id=msg1.message_id, text=f'Гонка закончится через {i}...')
+                bot.edit_message_text(chat_id=id2, message_id=msg2.message_id, text=f'Гонка закончится через {i}...')
             bot.delete_message(callback.message.chat.id, msg1.message_id)
             bot.delete_message(id2, msg2.message_id)
             if winner == 1: win_username = user1[15]

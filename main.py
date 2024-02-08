@@ -383,7 +383,7 @@ def callback_message(callback):
             markup = types.InlineKeyboardMarkup()
             cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
             markup.add(cancel)
-            bot.send_message(callback.message.chat.id, '🏎 Введи @username пользователя, с которым хочешь начать дуэль', reply_markup=markup)
+            bot.send_message(callback.message.chat.id, '🛣️ Ты зашел в режим дуэли\nЗдесь ты можешь учасвстовать в гонках 1 на 1 с другими пользователями\nПобедитель определяется случайно, шансы зависят от навыка вождения и от двигателя выбранного автомобиля\nПобедивший игрок забирает карту проигравшего\nУдачных заездов 🍀\n🏎 Введи @username пользователя, с которым хочешь начать дуэль', reply_markup=markup)
             bot.clear_step_handler_by_chat_id(callback.message.chat.id)
             bot.register_next_step_handler(callback.message, duels)
     elif json.loads(callback.data)[0] == 'cancel':
@@ -497,20 +497,20 @@ def callback_message(callback):
         user1 = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
         id2 = int(user1[20])
         user2 = cur.execute("SELECT * FROM users WHERE id = '%i'" % id2).fetchone()
-        card = json.loads(user1[5])[int(json.loads(callback.data)[1])]
-        cur.execute("UPDATE users SET dueling_with_card = '%s' WHERE id = '%i'" % (card, callback.message.chat.id))
+        card1 = json.loads(user1[5])[int(json.loads(callback.data)[1])]
+        cur.execute("UPDATE users SET dueling_with_card = '%s' WHERE id = '%i'" % (card1, callback.message.chat.id))
         conn.commit()
         markup = types.InlineKeyboardMarkup()
         leave = types.InlineKeyboardButton('🚪 Выйти из дуэли', callback_data=json.dumps(['leave_duel', '']))
         markup.add(leave)
-        bot.send_photo(callback.message.chat.id, open(f'./{card}.jpg', 'rb'), f'<b>Ты выбрал</b>\n{all_cards[card][0]}\nДвигатель: {all_cards[card][3]}', parse_mode='html', reply_markup=markup)
+        bot.send_photo(callback.message.chat.id, open(f'./{card1}.jpg', 'rb'), f'<b>Ты выбрал</b>\n{all_cards[card1][0]}\nДвигатель: {all_cards[card1][3]}', parse_mode='html', reply_markup=markup)
         if user2[21] != '0':
             card2 = user2[21]
             bot.send_photo(callback.message.chat.id, open(f'./{card2}.jpg', 'rb'), f'<b>Твой противник выбрал</b>\n{all_cards[card2][0]}\nДвигатель: {all_cards[card2][3]}', parse_mode='html')
-            bot.send_photo(id2, open(f'./{card}.jpg', 'rb'), f'<b>Твой противник выбрал</b>\n{all_cards[card][0]}\nДвигатель: {all_cards[card][3]}', parse_mode='html')
+            bot.send_photo(id2, open(f'./{card1}.jpg', 'rb'), f'<b>Твой противник выбрал</b>\n{all_cards[card1][0]}\nДвигатель: {all_cards[card1][3]}', parse_mode='html')
             bot.send_message(callback.message.chat.id, 'Гонка началась')
             bot.send_message(id2, 'Гонка началась')
-            power1 = all_cards[card][5] * user1[16]
+            power1 = all_cards[card1][5] * user1[16]
             power2 = all_cards[card2][5] * user2[16]
             chances = [50, 50]
             if power1 > power2 : chances = [100 - (power2 / power1) * 100, power2 / power1 * 100]
@@ -529,6 +529,34 @@ def callback_message(callback):
             else: win_username = user2[15]
             bot.send_message(callback.message.chat.id, f'<b>Победил</b> {win_username}', parse_mode='html')
             msg = bot.send_message(id2, f'<b>Победил</b> {win_username}', parse_mode='html')
+            cards1 = json.loads(user1[2])
+            cards2 = json.loads(user2[2])
+            if winner == 1:
+                if str(card2) in list(map(lambda x: x[0], cards1.items())):
+                    cards1[card2] += 1
+                else:
+                    cards1[card2] = 1
+                cards2[card2] -= 1
+                if cards2[card2] == 0: del cards2[card2]
+                cur.execute("UPDATE users SET number_of_cards = number_of_cards + 1 WHERE id = '%i'" % callback.message.chat.id)
+                conn.commit()
+                cur.execute("UPDATE users SET number_of_cards = number_of_cards - 1 WHERE id = '%i'" % id2)
+                conn.commit()
+            else:
+                if str(card1) in list(map(lambda x: x[0], cards2.items())):
+                    cards2[card1] += 1
+                else:
+                    cards2[card1] = 1
+                cards1[card1] -= 1
+                if cards1[card1] == 0: del cards1[card1]
+                cur.execute("UPDATE users SET number_of_cards = number_of_cards + 1 WHERE id = '%i'" % id2)
+                conn.commit()
+                cur.execute("UPDATE users SET number_of_cards = number_of_cards - 1 WHERE id = '%i'" % callback.message.chat.id)
+                conn.commit()
+            cur.execute("UPDATE users SET cards = '%s' WHERE id = '%i'" % (json.dumps(cards1), callback.message.chat.id))
+            conn.commit()
+            cur.execute("UPDATE users SET cards = '%s' WHERE id = '%i'" % (json.dumps(cards2), id2))
+            conn.commit()
             cur.execute("UPDATE users SET dueling_with_id = '%i' WHERE id = '%i'" % (0, callback.message.chat.id))
             conn.commit()
             cur.execute("UPDATE users SET dueling_with_card = '%s' WHERE id = '%i'" % ('0', callback.message.chat.id))

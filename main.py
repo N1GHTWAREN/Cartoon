@@ -56,6 +56,10 @@ rarities = (1, 3.928, 3.928, 3.928, 3.928, 3.928, 3.75, 1, 3.75, 3.75, 3.928, 3.
 skill_prices = [1000, 3000, 5000, 10000, 15000, 25000, 35000, 50000, 75000]
 cooldown_prices = [100000, 200000]
 time_for_cooldown_lvls = [14400, 10800, 7200]
+cards_prices = {'common': 1000,
+                'rare': 2500,
+                'epic': 5000,
+                'legendary': 10000}
 
 
 def rarity_test(card):
@@ -88,7 +92,7 @@ def time_conversion(sec):
         minunte_value = f'{minunte_value} минуты'
     else:
         minunte_value = f'{minunte_value} минут'
-    if minunte_value == '' and hour_value == '': return 'Меньше минуты'
+    if minunte_value == '' and hour_value == '': return 'меньше минуты'
     return hour_value + minunte_value
 
 
@@ -664,15 +668,114 @@ def callback_message(callback):
             num = 0
             number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
             if len(items) > 1:
-                next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_sell', '1']))
+                next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_sell', '']))
                 markup.row(number_of_card, next_card)
             else:
                 markup.add(number_of_card)
-            bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
+            if cards[items[num]] > 1:
+                sell_all_but_one = types.InlineKeyboardButton('Продать все дубликаты кроме одной', callback_data=json.dumps(['sell_all_but_one', items[num]]))
+                sell_all = types.InlineKeyboardButton('Продать все карты', callback_data=json.dumps(['sell_all', items[num]]))
+                markup.row(sell_all_but_one)
+                markup.row(sell_all)
+            else:
+                sell_one = types.InlineKeyboardButton('Продать карту', callback_data=json.dumps(['sell_one', items[num]]))
+                markup.row(sell_one)
+            bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), f'{all_cards[str(items[num])][0]}\nКоличество: {cards[items[num]]}', reply_markup=markup)
             cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
             conn.commit()
             cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
             conn.commit()
+        else:
+            bot.send_message(callback.message.chat.id, 'У тебя нет карт')
+    elif json.loads(callback.data)[0] == 'next_card_sell':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        items = json.loads(user[5])
+        num = int(user[10]) + 1
+        cards = json.loads(user[2])
+        cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
+        conn.commit()
+        markup = types.InlineKeyboardMarkup()
+        number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
+        if num + 1 != len(items):
+            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_sell', '']))
+            previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card_sell', '']))
+            markup.row(previous_card, number_of_card, next_card)
+        else:
+            previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card_sell', '']))
+            markup.row(previous_card, number_of_card)
+        if cards[items[num]] > 1:
+            sell_all_but_one = types.InlineKeyboardButton('Продать все дубликаты кроме одной', callback_data=json.dumps(['sell_all_but_one', items[num]]))
+            sell_all = types.InlineKeyboardButton('Продать все карты', callback_data=json.dumps(['sell_all', items[num]]))
+            markup.row(sell_all_but_one)
+            markup.row(sell_all)
+        else:
+            sell_one = types.InlineKeyboardButton('Продать карту', callback_data=json.dumps(['sell_one', items[num]]))
+            markup.row(sell_one)
+        file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'), caption=f'{all_cards[str(items[num])][0]}\nКоличество: {cards[items[num]]}')
+        bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
+    elif json.loads(callback.data)[0] == 'previous_card_sell':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        items = json.loads(user[5])
+        num = int(user[10]) - 1
+        cards = json.loads(user[2])
+        cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
+        conn.commit()
+        markup = types.InlineKeyboardMarkup()
+        number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
+        if num != 0:
+            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_sell', '']))
+            previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card_sell', '']))
+            markup.row(previous_card, number_of_card, next_card)
+        else:
+            next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_sell', '']))
+            markup.row(number_of_card, next_card)
+        if cards[items[num]] > 1:
+            sell_all_but_one = types.InlineKeyboardButton('Продать все дубликаты кроме одной', callback_data=json.dumps(['sell_all_but_one', items[num]]))
+            sell_all = types.InlineKeyboardButton('Продать все карты', callback_data=json.dumps(['sell_all', items[num]]))
+            markup.row(sell_all_but_one)
+            markup.row(sell_all)
+        else:
+            sell_one = types.InlineKeyboardButton('Продать карту', callback_data=json.dumps(['sell_one', items[num]]))
+            markup.row(sell_one)
+        file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'),caption=f'{all_cards[str(items[num])][0]}\nКоличество: {cards[items[num]]}')
+        bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
+    elif json.loads(callback.data)[0] == 'sell_all':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        num = int(user[10]) - 1
+        item_num = json.loads(callback.data)[1]
+        cards = json.loads(user[2])
+        items = list(map(lambda x: x[0], cards.items()))
+        num_cards = cards[item_num]
+        price_of_card = cards_prices[all_cards[item_num][4]]
+        del cards[item_num]
+        cur.execute("UPDATE users SET influence_points = influence_points + '%i' WHERE id = '%i'" % (num_cards * price_of_card, callback.message.chat.id))
+        conn.commit()
+        cur.execute("UPDATE users SET number_of_cards = number_of_cards - '%i' WHERE id = '%i'" % (num_cards, callback.message.chat.id))
+        conn.commit()
+        cur.execute("UPDATE users SET cards = '%s' WHERE id = '%i'" % (json.dumps(cards), callback.message.chat.id))
+        conn.commit()
+        cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
+        conn.commit()
+        cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
+        conn.commit()
+    elif json.loads(callback.data)[0] == 'sell_one':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        item_num = json.loads(callback.data)[1]
+        num = int(user[10]) - 1
+        cards = json.loads(user[2])
+        items = list(map(lambda x: x[0], cards.items()))
+        price_of_card = cards_prices[all_cards[item_num][4]]
+        del cards[item_num]
+        cur.execute("UPDATE users SET influence_points = influence_points + '%i' WHERE id = '%i'" % (price_of_card, callback.message.chat.id))
+        conn.commit()
+        cur.execute("UPDATE users SET number_of_cards = number_of_cards - 1 WHERE id = '%i'" % callback.message.chat.id)
+        conn.commit()
+        cur.execute("UPDATE users SET cards = '%s' WHERE id = '%i'" % (json.dumps(cards), callback.message.chat.id))
+        conn.commit()
+        cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
+        conn.commit()
+        cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
+        conn.commit()
     cur.close()
     conn.close()
 

@@ -160,7 +160,7 @@ def on_click(message):
     elif message.text == 'Главное меню 🏠':
         markup = types.InlineKeyboardMarkup()
         prof = types.InlineKeyboardButton('Профиль 👤', callback_data=json.dumps(['profile', '']))
-        deck = types.InlineKeyboardButton('Коллекция 🃏', callback_data=json.dumps(['deck', '']))
+        deck = types.InlineKeyboardButton('Коллекция 🗃️', callback_data=json.dumps(['deck', '']))
         duel = types.InlineKeyboardButton('Начать дуэль ⚔️', callback_data=json.dumps(['duel', '']))
         shop = types.InlineKeyboardButton('Магазин 🛍', callback_data=json.dumps(['shop', '']))
         markup.row(prof, deck)
@@ -185,12 +185,12 @@ def callback_message(callback):
         bot.send_message(callback.message.chat.id, f'Имя:\n{callback.message.chat.first_name}\nРейтинг: {rating}\nПобед в дуэлях: {duel_wins}\nНавык вождения: {driving_skill}/10')
     elif json.loads(callback.data)[0] == 'deck':
         markup = types.InlineKeyboardMarkup()
-        show_all = types.InlineKeyboardButton('Показать все карты', callback_data=json.dumps(['show_all', None]))
-        show_legendary = types.InlineKeyboardButton('Показать легендарные карты', callback_data=json.dumps(['show_legendary', '']))
-        show_epic = types.InlineKeyboardButton('Показать эпические карты', callback_data=json.dumps(['show_epic', '']))
-        show_rare = types.InlineKeyboardButton('Показать редкие карты', callback_data=json.dumps(['show_rare', '']))
-        show_common = types.InlineKeyboardButton('Показать обычные карты', callback_data=json.dumps(['show_common', '']))
-        sell_cards = types.InlineKeyboardButton('Продать карты', callback_data=json.dumps(['sell_cards']))
+        show_all = types.InlineKeyboardButton('🌌 Показать все карты', callback_data=json.dumps(['show_all', None]))
+        show_legendary = types.InlineKeyboardButton('✨ Показать легендарные карты', callback_data=json.dumps(['show_legendary', '']))
+        show_epic = types.InlineKeyboardButton('☄️ Показать эпические карты', callback_data=json.dumps(['show_epic', '']))
+        show_rare = types.InlineKeyboardButton('🌎 Показать редкие карты', callback_data=json.dumps(['show_rare', '']))
+        show_common = types.InlineKeyboardButton('🚀 Показать обычные карты', callback_data=json.dumps(['show_common', '']))
+        sell_cards = types.InlineKeyboardButton('💵 Продать карты', callback_data=json.dumps(['sell_cards', '']))
         markup.row(show_all)
         markup.row(show_common)
         markup.row(show_rare)
@@ -673,7 +673,7 @@ def callback_message(callback):
             else:
                 markup.add(number_of_card)
             if cards[items[num]] > 1:
-                sell_all_but_one = types.InlineKeyboardButton('Продать все дубликаты кроме одной', callback_data=json.dumps(['sell_all_but_one', items[num]]))
+                sell_all_but_one = types.InlineKeyboardButton('Продать все дубликаты', callback_data=json.dumps(['sell_all_but_one', items[num]]))
                 sell_all = types.InlineKeyboardButton('Продать все карты', callback_data=json.dumps(['sell_all', items[num]]))
                 markup.row(sell_all_but_one)
                 markup.row(sell_all)
@@ -704,7 +704,7 @@ def callback_message(callback):
             previous_card = types.InlineKeyboardButton('<', callback_data=json.dumps(['previous_card_sell', '']))
             markup.row(previous_card, number_of_card)
         if cards[items[num]] > 1:
-            sell_all_but_one = types.InlineKeyboardButton('Продать все дубликаты кроме одной', callback_data=json.dumps(['sell_all_but_one', items[num]]))
+            sell_all_but_one = types.InlineKeyboardButton('Продать все дубликаты', callback_data=json.dumps(['sell_all_but_one', items[num]]))
             sell_all = types.InlineKeyboardButton('Продать все карты', callback_data=json.dumps(['sell_all', items[num]]))
             markup.row(sell_all_but_one)
             markup.row(sell_all)
@@ -730,7 +730,7 @@ def callback_message(callback):
             next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_sell', '']))
             markup.row(number_of_card, next_card)
         if cards[items[num]] > 1:
-            sell_all_but_one = types.InlineKeyboardButton('Продать все дубликаты кроме одной', callback_data=json.dumps(['sell_all_but_one', items[num]]))
+            sell_all_but_one = types.InlineKeyboardButton('Продать все дубликаты', callback_data=json.dumps(['sell_all_but_one', items[num]]))
             sell_all = types.InlineKeyboardButton('Продать все карты', callback_data=json.dumps(['sell_all', items[num]]))
             markup.row(sell_all_but_one)
             markup.row(sell_all)
@@ -740,6 +740,7 @@ def callback_message(callback):
         file = types.InputMedia(type='photo', media=open(f'./{items[num]}.jpg', 'rb'),caption=f'{all_cards[str(items[num])][0]}\nКоличество: {cards[items[num]]}')
         bot.edit_message_media(file, callback.message.chat.id, callback.message.message_id, reply_markup=markup)
     elif json.loads(callback.data)[0] == 'sell_all':
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
         num = int(user[10]) - 1
         item_num = json.loads(callback.data)[1]
@@ -758,7 +759,13 @@ def callback_message(callback):
         conn.commit()
         cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
         conn.commit()
+        markup = types.InlineKeyboardMarkup()
+        if len(cards) != 0:
+            sell_more = types.InlineKeyboardButton('↩️ Продать ещё карты', callback_data=json.dumps(['sell_cards', '']))
+            markup.add(sell_more)
+        bot.send_message(callback.message.chat.id, f'Ты продал карты на сумму {num_cards * price_of_card} очков влияния', reply_markup=markup)
     elif json.loads(callback.data)[0] == 'sell_one':
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
         item_num = json.loads(callback.data)[1]
         num = int(user[10]) - 1
@@ -776,6 +783,30 @@ def callback_message(callback):
         conn.commit()
         cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
         conn.commit()
+        markup = types.InlineKeyboardMarkup()
+        if len(cards) != 0:
+            sell_more = types.InlineKeyboardButton('↩️ Продать ещё карты', callback_data=json.dumps(['sell_cards', '']))
+            markup.add(sell_more)
+        bot.send_message(callback.message.chat.id, f'Ты продал карту за {price_of_card} очков влияния', reply_markup=markup)
+    elif json.loads(callback.data)[0] == 'sell_all_but_one':
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        item_num = json.loads(callback.data)[1]
+        cards = json.loads(user[2])
+        num_cards = cards[item_num] - 1
+        price_of_card = cards_prices[all_cards[item_num][4]]
+        cards[item_num] = 1
+        cur.execute("UPDATE users SET influence_points = influence_points + '%i' WHERE id = '%i'" % (num_cards * price_of_card, callback.message.chat.id))
+        conn.commit()
+        cur.execute("UPDATE users SET number_of_cards = number_of_cards - '%i' WHERE id = '%i'" % (num_cards, callback.message.chat.id))
+        conn.commit()
+        cur.execute("UPDATE users SET cards = '%s' WHERE id = '%i'" % (json.dumps(cards), callback.message.chat.id))
+        conn.commit()
+        markup = types.InlineKeyboardMarkup()
+        if len(cards) != 0:
+            sell_more = types.InlineKeyboardButton('↩️ Продать ещё карты', callback_data=json.dumps(['sell_cards', '']))
+            markup.add(sell_more)
+        bot.send_message(callback.message.chat.id, f'Ты продал карты на сумму {num_cards * price_of_card} очков влияния', reply_markup=markup)
     cur.close()
     conn.close()
 

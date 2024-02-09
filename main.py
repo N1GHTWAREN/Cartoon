@@ -182,15 +182,17 @@ def callback_message(callback):
     elif json.loads(callback.data)[0] == 'deck':
         markup = types.InlineKeyboardMarkup()
         show_all = types.InlineKeyboardButton('Показать все карты', callback_data=json.dumps(['show_all', None]))
-        show_legendary = types.InlineKeyboardButton('Показать все легендарные карты', callback_data=json.dumps(['show_legendary', '']))
-        show_epic = types.InlineKeyboardButton('Показать все эпические карты', callback_data=json.dumps(['show_epic', '']))
-        show_rare = types.InlineKeyboardButton('Показать все редкие карты', callback_data=json.dumps(['show_rare', '']))
-        show_common = types.InlineKeyboardButton('Показать все обычные карты', callback_data=json.dumps(['show_common', '']))
+        show_legendary = types.InlineKeyboardButton('Показать легендарные карты', callback_data=json.dumps(['show_legendary', '']))
+        show_epic = types.InlineKeyboardButton('Показать эпические карты', callback_data=json.dumps(['show_epic', '']))
+        show_rare = types.InlineKeyboardButton('Показать редкие карты', callback_data=json.dumps(['show_rare', '']))
+        show_common = types.InlineKeyboardButton('Показать обычные карты', callback_data=json.dumps(['show_common', '']))
+        sell_cards = types.InlineKeyboardButton('Продать карты', callback_data=json.dumps(['sell_cards']))
         markup.row(show_all)
         markup.row(show_common)
         markup.row(show_rare)
         markup.row(show_epic)
         markup.row(show_legendary)
+        markup.row(sell_cards)
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
         number = user[1]
@@ -647,6 +649,30 @@ def callback_message(callback):
             bot.send_message(callback.message.chat.id, f'✅ Улучшение навыка вождения до {card_cooldown_level} уровня успешно приобретено')
         else:
             bot.send_message(callback.message.chat.id, f'У тебя не хватает очков влияния для покупки этого улучшения, тебе нужно ещё {cooldown_prices[card_cooldown_level - 1] - influence_points}')
+    elif json.loads(callback.data)[0] == 'sell_cards':
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        do_not_have_cards = False
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        cards = set()
+        if json.loads(user[2]):
+            cards = json.loads(user[2])
+        else:
+            do_not_have_cards = True
+        if not do_not_have_cards:
+            markup = types.InlineKeyboardMarkup()
+            items = list(map(lambda x: x[0], cards.items()))
+            num = 0
+            number_of_card = types.InlineKeyboardButton(f'{num + 1} / {len(items)}', callback_data=json.dumps(['nothing', '']))
+            if len(items) > 1:
+                next_card = types.InlineKeyboardButton('>', callback_data=json.dumps(['next_card_sell', '1']))
+                markup.row(number_of_card, next_card)
+            else:
+                markup.add(number_of_card)
+            bot.send_photo(callback.message.chat.id, open(f'./{items[num]}.jpg', 'rb'), all_cards[str(items[num])][0], reply_markup=markup)
+            cur.execute("UPDATE users SET num_1 = '%i' WHERE id = '%i'" % (num, callback.message.chat.id))
+            conn.commit()
+            cur.execute("UPDATE users SET item_1 = '%s' WHERE id = '%i'" % (json.dumps(items), callback.message.chat.id))
+            conn.commit()
     cur.close()
     conn.close()
 

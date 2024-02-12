@@ -100,15 +100,14 @@ def time_conversion(sec):
 def start(message):
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
-    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int, duel_wins int, influence_points int, card_cooldown_level int, dueling_with_id int, dueling_with_card VARCHAR, msg_to_delete int)')
+    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int, duel_wins int, influence_points int, card_cooldown_level int, dueling_with_id int, dueling_with_card VARCHAR, msg_to_delete int, rolls int, last_dice VARCHAR)')
     conn.commit()
     if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE id = '%i')" % message.from_user.id).fetchone()[0] == 0:
         now = datetime.datetime.now()
-        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level, dueling_with_id, dueling_with_card, msg_to_delete) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 1, 0, '0', 0))
+        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level, dueling_with_id, dueling_with_card, msg_to_delete, rolls, last_dice) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%s')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 1, 0, '0', 0, 0, json.dumps((now.year, now.month, now.day - 7, now.hour, now.minute, now.second))))
         conn.commit()
     cur.close()
     conn.close()
-
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     new_card = types.KeyboardButton('Получить новую карту 🚗')
     menu = types.KeyboardButton('Главное меню 🏠')
@@ -132,11 +131,12 @@ def on_click(message):
         return info(message)
     elif message.text == 'Получить новую карту 🚗':
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % message.from_user.id).fetchone()
+        rolls = int(user[23])
         cards = json.loads(user[2])
         last_time = datetime.datetime(*json.loads(user[4]))
         cooldown_lvl = int(user[19])
-        # time_for_cooldown_lvls[cooldown_lvl - 1]
-        if (datetime.datetime.now() - last_time).seconds >= 1:
+        if rolls != 0:
+            rolls -= 1
             card_num = random.choices(for_random, weights=rarities)[0]
             card = all_cards[str(card_num)]
             rarity_of_card = rarity_test(card)
@@ -145,27 +145,48 @@ def on_click(message):
             conn.commit()
             cur.execute("UPDATE users SET rating = rating + '%i' WHERE id = '%i'" % (rarity_of_card[1], message.chat.id))
             conn.commit()
+            cur.execute("UPDATE users SET rolls = '%i' WHERE id = '%i'" % (rolls, message.chat.id))
+            conn.commit()
             if str(card_num) in list(map(lambda x: x[0], cards.items())):
                 cards[str(card_num)] += 1
             else:
                 cards[str(card_num)] = 1
             cur.execute("UPDATE users SET cards = '%s' WHERE id = '%i'" % (json.dumps(cards), message.chat.id))
             conn.commit()
-            now = datetime.datetime.now()
-            cur.execute("UPDATE users SET last_time = '%s' WHERE id = '%i'" % (json.dumps([now.year, now.month, now.day, now.hour, now.minute, now.second]), message.chat.id))
-            conn.commit()
         else:
             # time_for_cooldown_lvls[cooldown_lvl - 1]
-            bot.send_message(message.chat.id, f'До следующей попытки {time_conversion(1 - (datetime.datetime.now() - last_time).seconds)}')
+            if (datetime.datetime.now() - last_time).seconds >= time_for_cooldown_lvls[cooldown_lvl - 1]:
+                card_num = random.choices(for_random, weights=rarities)[0]
+                card = all_cards[str(card_num)]
+                rarity_of_card = rarity_test(card)
+                bot.send_photo(message.chat.id, open(f'{card_num}.jpg', 'rb'), f'Ты получил новую карту: {card[0]}\nГоды выпуска: {card[1]}\nСтрана: {card[2]}\nДвигатель: {card[3]}\nРедкость: {rarity_of_card[0]}\nРейтинг + {str(rarity_of_card[1])}\n⏳ До следующей попытки {time_for_cooldown_lvls[cooldown_lvl - 1] // 3600} часа')
+                cur.execute("UPDATE users SET number_of_cards = number_of_cards + 1 WHERE id = '%i'" % message.chat.id)
+                conn.commit()
+                cur.execute("UPDATE users SET rating = rating + '%i' WHERE id = '%i'" % (rarity_of_card[1], message.chat.id))
+                conn.commit()
+                if str(card_num) in list(map(lambda x: x[0], cards.items())):
+                    cards[str(card_num)] += 1
+                else:
+                    cards[str(card_num)] = 1
+                cur.execute("UPDATE users SET cards = '%s' WHERE id = '%i'" % (json.dumps(cards), message.chat.id))
+                conn.commit()
+                now = datetime.datetime.now()
+                cur.execute("UPDATE users SET last_time = '%s' WHERE id = '%i'" % (json.dumps([now.year, now.month, now.day, now.hour, now.minute, now.second]), message.chat.id))
+                conn.commit()
+            else:
+                # time_for_cooldown_lvls[cooldown_lvl - 1]
+                bot.send_message(message.chat.id, f'До следующей попытки {time_conversion(time_for_cooldown_lvls[cooldown_lvl - 1] - (datetime.datetime.now() - last_time).seconds)}')
     elif message.text == 'Главное меню 🏠':
         markup = types.InlineKeyboardMarkup()
         prof = types.InlineKeyboardButton('Профиль 👤', callback_data=json.dumps(['profile', '']))
         deck = types.InlineKeyboardButton('Коллекция 🗃️', callback_data=json.dumps(['deck', '']))
         duel = types.InlineKeyboardButton('Начать дуэль ⚔️', callback_data=json.dumps(['duel', '']))
         shop = types.InlineKeyboardButton('Магазин 🛍', callback_data=json.dumps(['shop', '']))
+        dice = types.InlineKeyboardButton('Получить попытки 🎲', callback_data=json.dumps(['dice', '']))
         markup.row(prof, deck)
         markup.row(duel)
         markup.row(shop)
+        markup.row(dice)
         bot.send_photo(message.chat.id, open('./garage_main.png', 'rb'), '🤔💭 Доступные действия:', reply_markup=markup)
     cur.close()
     conn.close()
@@ -807,6 +828,24 @@ def callback_message(callback):
             sell_more = types.InlineKeyboardButton('↩️ Продать ещё карты', callback_data=json.dumps(['sell_cards', '']))
             markup.add(sell_more)
         bot.send_message(callback.message.chat.id, f'Ты продал карты на сумму {num_cards * price_of_card} очков влияния', reply_markup=markup)
+    elif json.loads(callback.data)[0] == 'dice':
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        last_time_dice = datetime.datetime(*json.loads(user[24]))
+        if (datetime.datetime.now() - last_time_dice).days >= 7:
+            msg = bot.send_dice(callback.message.chat.id, '🎲')
+            cur.execute("UPDATE users SET rolls = rolls + '%i' WHERE id = '%i'" % (msg.dice.value, callback.message.chat.id))
+            conn.commit()
+            now = datetime.datetime.now()
+            cur.execute("UPDATE users SET last_dice = '%s' WHERE id = '%i'" % (json.dumps([now.year, now.month, now.day, now.hour, now.minute, now.second]), callback.message.chat.id))
+            conn.commit()
+            if msg.dice.value == 1: text = 'попытку'
+            elif msg.dice.value in (2, 3, 4) : text = 'попытки'
+            else: text = 'попыток'
+            time.sleep(3.5)
+            bot.send_message(callback.message.chat.id, f'Ты получил {msg.dice.value} {text}')
+        else:
+            bot.send_message(callback.message.chat.id, 'Ты уже получал попытки на этой неделе')
     cur.close()
     conn.close()
 

@@ -856,6 +856,8 @@ def mailing(message):
     text = message.text[13:]
     for id in ids:
         bot.send_message(id, text)
+    cur.close()
+    conn.close()
 
 
 bot.polling(none_stop=True)

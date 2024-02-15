@@ -1142,6 +1142,7 @@ def mailing(message):
     text = message.text[13:]
     for id in ids:
         bot.send_message(id, text)
+    bot.register_next_step_handler(message, on_click)
     cur.close()
     conn.close()
 

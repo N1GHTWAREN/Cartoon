@@ -619,6 +619,7 @@ def callback_message(callback):
         driving_skill = int(user[16])
         influence_points = int(user[18])
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        bot.delete_message(callback.message.chat.id, callback.message.message_id - 1)
         if influence_points >= skill_prices[driving_skill - 1]:
             influence_points -= skill_prices[driving_skill - 1]
             driving_skill += 1
@@ -634,6 +635,7 @@ def callback_message(callback):
         card_cooldown_level = int(user[16])
         influence_points = int(user[18])
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        bot.delete_message(callback.message.chat.id, callback.message.message_id - 1)
         if influence_points >= cooldown_prices[card_cooldown_level - 1]:
             influence_points -= cooldown_prices[card_cooldown_level - 1]
             card_cooldown_level += 1

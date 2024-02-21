@@ -720,10 +720,10 @@ def callback_message(callback):
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.send_message(callback.message.chat.id, f'Ты продал {text} на сумму {quantity * price_of_card} очков влияния', reply_markup=markup)
     elif json.loads(callback.data)[0] == 'dice':
-        bot.delete_message(callback.message.chat.id, callback.message.message_id)
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
         last_time_dice = datetime.datetime(*json.loads(user[24]))
         if (datetime.datetime.now() - last_time_dice).days >= 7:
+            bot.delete_message(callback.message.chat.id, callback.message.message_id)
             msg = bot.send_dice(callback.message.chat.id, '🎲')
             cur.execute("UPDATE users SET rolls = rolls + '%i' WHERE id = '%i'" % (msg.dice.value, callback.message.chat.id))
             conn.commit()
@@ -735,8 +735,7 @@ def callback_message(callback):
             else: text = 'попыток'
             time.sleep(3.5)
             bot.send_message(callback.message.chat.id, f'Ты получил {msg.dice.value} {text}')
-        else:
-            bot.send_message(callback.message.chat.id, 'Ты уже получал попытки на этой неделе')
+        else: bot.answer_callback_query(callback.id, 'Ты уже получал попытки на этой неделе')
     elif json.loads(callback.data)[0] == 'craft':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         markup = types.InlineKeyboardMarkup()

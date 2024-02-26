@@ -1217,10 +1217,10 @@ def trade(message):
     cur = conn.cursor()
     user1 = cur.execute("SELECT * FROM users WHERE id = '%i'" % message.chat.id).fetchone()
     if message.text[0] == '@':
-        #if user1[15] == message.text:
-            #bot.send_message(message.chat.id, 'Ты не можешь обменяться картами с самим собой 😐')
-            #bot.register_next_step_handler(message, on_click)
-        if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE username = '%s')" % message.text).fetchone()[0]:
+        if user1[15] == message.text:
+            bot.send_message(message.chat.id, 'Ты не можешь обменяться картами с самим собой 😐')
+            bot.register_next_step_handler(message, on_click)
+        elif cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE username = '%s')" % message.text).fetchone()[0]:
             user2 = cur.execute("SELECT * FROM users WHERE username = '%s'" % message.text).fetchone()
             if int(user2[1]) == 0:
                 bot.send_message(message.chat.id, 'У этого пользователя ещё нет карт')

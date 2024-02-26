@@ -65,17 +65,10 @@ values_of_cards = {'common': 1,
                 'rare': 5,
                 'epic': 15,
                 'legendary': 50}
-
-
-def rarity_test(card):
-    if card[4] == 'legendary':
-        return 'Легендарная', 3000
-    elif card[4] == 'epic':
-        return 'Эпическая', 1500
-    elif card[4] == 'rare':
-        return 'Редкая', 500
-    elif card[4] == 'common':
-        return 'Обычная', 250
+rarity_test = {'legendary': ('Легендарная', 3000),
+               'epic': ('Эпическая', 1500),
+               'rare': ('Редкая', 500),
+               'common': ('Обычная', 250)}
 
 
 def time_conversion(sec):
@@ -147,7 +140,7 @@ def on_click(message):
             rolls -= 1
             card_num = random.choices(for_random, weights=rarities)[0]
             card = all_cards[str(card_num)]
-            rarity_of_card = rarity_test(card)
+            rarity_of_card = rarity_test[card[4]]
             with open(f'{card_num}.jpg', 'rb') as photo:
                 bot.send_photo(message.chat.id, photo, f'Ты получил новую карту: {card[0]}\nГоды выпуска: {card[1]}\nСтрана: {card[2]}\nДвигатель: {card[3]}\nРедкость: {rarity_of_card[0]}\nРейтинг + {str(rarity_of_card[1])}')
             cur.execute("UPDATE users SET number_of_cards = number_of_cards + 1 WHERE id = '%i'" % message.chat.id)
@@ -167,7 +160,7 @@ def on_click(message):
             if (datetime.datetime.now() - last_time).seconds >= 0:
                 card_num = random.choices(for_random, weights=rarities)[0]
                 card = all_cards[str(card_num)]
-                rarity_of_card = rarity_test(card)
+                rarity_of_card = rarity_test[card[4]]
                 with open(f'{card_num}.jpg', 'rb') as photo:
                     bot.send_photo(message.chat.id, photo, f'Ты получил новую карту: {card[0]}\nГоды выпуска: {card[1]}\nСтрана: {card[2]}\nДвигатель: {card[3]}\nРедкость: {rarity_of_card[0]}\nРейтинг + {str(rarity_of_card[1])}\n⏳ До следующей попытки {time_for_cooldown_lvls[cooldown_lvl - 1] // 3600} часа')
                 cur.execute("UPDATE users SET number_of_cards = number_of_cards + 1 WHERE id = '%i'" % message.chat.id)
@@ -194,7 +187,8 @@ def on_click(message):
         shop = types.InlineKeyboardButton('Магазин 🛍', callback_data=json.dumps(['shop', '']))
         dice = types.InlineKeyboardButton('Получить попытки 🎲', callback_data=json.dumps(['dice', '']))
         trade = types.InlineKeyboardButton('Обмен карт 🤝', callback_data=json.dumps(['trade', '']))
-        markup.row(prof, deck).row(duel).row(shop).row(dice).row(trade)
+        mini_games = types.InlineKeyboardButton('Мини игры 🎮', callback_data=json.dumps(['games', '']))
+        markup.row(prof, deck).row(duel).row(shop).row(dice).row(trade).row(mini_games)
         with open('./garage_main.png', 'rb') as photo:
             bot.send_photo(message.chat.id, photo, '🤔💭 Доступные действия:', reply_markup=markup)
     cur.close()
@@ -1160,6 +1154,13 @@ def callback_message(callback):
         bot.send_message(int(user1[0]), 'Обмен прошел успешно')
         bot.send_message(int(user2[0]), 'Обмен прошел успешно')
         bot.register_next_step_handler(callback.message, on_click)
+    elif json.loads(callback.data)[0] == 'games':
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        markup = types.InlineKeyboardMarkup()
+        slots = types.InlineKeyboardButton('Слоты 🎰', callback_data=json.dumps(['slots', '']))
+        field = types.InlineKeyboardButton('Минное поле 🔢', callback_data=json.dumps(['field', '']))
+        markup.row(slots).row(field)
+        bot.send_message(callback.message.chat.id, '🕹️ Выбери игру:', reply_markup=markup)
     cur.close()
     conn.close()
 

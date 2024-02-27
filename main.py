@@ -98,12 +98,12 @@ def time_conversion(sec):
 def start(message):
     conn = sqlite3.connect('garage_data_base.sql')
     cur = conn.cursor()
-    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int, duel_wins int, influence_points int, card_cooldown_level int, dueling_with_id int, dueling_with_card VARCHAR, msg_to_delete int, rolls int, last_dice VARCHAR, using_for_craft_common int, using_for_craft_rare int, using_for_craft_epic int, using_for_craft_legendary int, using_for_trade VARCHAR)')
+    cur.execute('CREATE TABLE IF NOT EXISTS users (id int primary key, number_of_cards int, cards VARCHAR, rating int, last_time VARCHAR, item_1 VARCHAR, item_2 VARCHAR, item_3 VARCHAR, item_4 VARCHAR, item_5 VARCHAR, num_1 int, num_2 int, num_3 int, num_4 int, num_5 int, username VARCHAR, driving_skill int, duel_wins int, influence_points int, card_cooldown_level int, dueling_with_id int, dueling_with_card VARCHAR, msg_to_delete int, rolls int, last_dice VARCHAR, using_for_craft_common int, using_for_craft_rare int, using_for_craft_epic int, using_for_craft_legendary int, using_for_trade VARCHAR, details int, slots_rolls int)')
     conn.commit()
     if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE id = '%i')" % message.from_user.id).fetchone()[0] == 0:
         now = datetime.datetime.today() - datetime.timedelta(hours=4)
         now1 = datetime.datetime.today() - datetime.timedelta(days=7)
-        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level, dueling_with_id, dueling_with_card, msg_to_delete, rolls, last_dice, using_for_craft_common, using_for_craft_rare, using_for_craft_epic, using_for_craft_legendary, using_for_trade) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%s')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 1, 0, '0', 0, 0, json.dumps((now1.year, now1.month, now1.day, now1.hour, now1.minute, now1.second)), 0, 0, 0, 0, '0'))
+        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level, dueling_with_id, dueling_with_card, msg_to_delete, rolls, last_dice, using_for_craft_common, using_for_craft_rare, using_for_craft_epic, using_for_craft_legendary, using_for_trade, details, slots_rolls) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%s', '%i', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 1, 0, '0', 0, 0, json.dumps((now1.year, now1.month, now1.day, now1.hour, now1.minute, now1.second)), 0, 0, 0, 0, '0', 10000, 0))
         conn.commit()
     cur.close()
     conn.close()
@@ -1161,6 +1161,23 @@ def callback_message(callback):
         field = types.InlineKeyboardButton('Минное поле 🔢', callback_data=json.dumps(['field', '']))
         markup.row(slots).row(field)
         bot.send_message(callback.message.chat.id, '🕹️ Выбери игру:', reply_markup=markup)
+    elif json.loads(callback.data)[0] == 'slots':
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        markup = types.InlineKeyboardMarkup()
+        play = types.InlineKeyboardButton('Играть 🃏', callback_data=json.dumps(['play_slots', '']))
+        get_details = types.InlineKeyboardButton('Пополнить баланс деталей ⚙️', callback_data=json.dumps(['details', '']))
+        markup.row(play).row(get_details)
+        bot.send_message(callback.message.chat.id, f'🎰 Запусти слоты, если автомаст выдаст три одинаковых слота, ты выиграешь 10 попыток\n\n⚙️ Стоимость одной игры 49 деталей\n\nУ тебя {user[30]} деталей и {user[31]} бесплатных прокруток', reply_markup=markup)
+    elif json.loads(callback.data)[0] == 'play_slots':
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        details = int(user[30])
+        if details < 49: bot.answer_callback_query(callback.id, 'У тебя недостаточно деталей для игры')
+        else:
+            cur.execute("UPDATE users SET details = details - 49 WHERE id = '%i'" % int(user[0]))
+            conn.commit()
+            msg = bot.send_dice(callback.message.chat.id, '🎰')
+            print(msg.dice.value)
     cur.close()
     conn.close()
 

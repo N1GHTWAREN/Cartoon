@@ -64,7 +64,10 @@ all_cards = {
     '52': ('Audi RS3 (2016)', '2011 - настоящее время', '🇩🇪', '2.5 л / 340 л.с. / бензин', 'rare', 340),
     '53': ('Volkswagen Passat (2015)', '2008 - настоящее время', '🇩🇪', '2.0 л / 170 л.с. / дизель', 'common', 170),
     '54': ('Ford Focus (2013)', '1998 - настоящее время', '🇺🇸', '1.6 л / 125 л.с. / бензин', 'common', 125),
-    '55': ('BMW M5 F90 (2019)', '1985 - настоящее время', '🇩🇪', '4.4 л / 625 л.с. / Бензин', 'epic', 625)
+    '55': ('BMW M5 F90 (2019)', '1985 - настоящее время', '🇩🇪', '4.4 л / 625 л.с. / Бензин', 'epic', 625),
+    '56': ('Lamborghini Veneno (2014)', '2013 - 2014', '🇮🇹', '6.5 л / 750 л.с. / Бензин', 'special', 750),
+    '57': ('Pagani Zonda (2019)', '1999 - 2019', '🇮🇹', '7.3 л / 602 л.с. / Бензин', 'special', 602),
+    '58': ('Koenigsegg One:1 (2016)', '2014 - 2016', '🇸🇪', '5.0 л / 1360 л.с. / Бензин', 'special', 1360)
 }
 for_random = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '52', '53', '54', '55']
 rarities = (0.1, 4, 4, 4, 4, 4, 2.27, 0.1, 2.27, 2.27, 4, 4, 0.12, 0.1, 0.1, 0.12, 4, 0.12, 0.12, 4, 4, 2.27, 0.12, 0.1, 0.12, 4, 0.12, 4, 0.12, 2.27, 2.27, 0.12, 2.27, 0.12, 4, 2.27, 4, 0.12, 0.12, 2.27, 0.12, 0.12, 0.12, 0.12, 0.12, 4, 4, 0.12, 2.27, 0.12, 0.12, 2.27, 4, 4, 0.12)
@@ -83,6 +86,7 @@ rarity_test = {'legendary': ('Легендарная', 3000),
                'rare': ('Редкая', 500),
                'common': ('Обычная', 250),
                'special': ('Специальная', 5000)}
+specials = ['56', '57', '58']
 
 
 def time_conversion(sec):
@@ -1238,7 +1242,15 @@ def callback_message(callback):
             bot.send_message(callback.message.chat.id, '🤔 Выбери поле', reply_markup=field_markup)
     elif json.loads(callback.data)[0] == 'field_card':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
-        bot.send_message(callback.message.chat.id, 'Ты выбрал поле с картой!')
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
+        card = random.choices(specials, k=1)
+        cards = json.loads(user[2])
+        if card in cards: cards[card] += 1
+        else: cards[card] = 1
+        cur.execute("UPDATE users SET cards = '%s' WHERE id = '%i'" % (json.dumps(cards), int(user[0])))
+        conn.commit()
+        with open(f'./{card}.jpg', 'rb') as photo:
+            bot.send_photo(callback.message.chat.id, photo, f'Ты получил особую карту!:\n{all_cards[card][0]}\nГоды выпуска: {all_cards[card][1]}\nСтрана: {all_cards[card][2]}\nДвигатель: {all_cards[card][3]}')
     elif json.loads(callback.data)[0] == 'field_none':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.send_message(callback.message.chat.id, 'Ты выбрал поле без карты')

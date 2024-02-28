@@ -1177,7 +1177,17 @@ def callback_message(callback):
             cur.execute("UPDATE users SET details = details - 49 WHERE id = '%i'" % int(user[0]))
             conn.commit()
             msg = bot.send_dice(callback.message.chat.id, '🎰')
-            print(msg.dice.value)
+            markup = types.InlineKeyboardMarkup()
+            play = types.InlineKeyboardButton('Играть 🃏', callback_data=json.dumps(['play_slots', '']))
+            get_details = types.InlineKeyboardButton('Пополнить баланс деталей ⚙️', callback_data=json.dumps(['details', '']))
+            markup.row(play).row(get_details)
+            bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=f'🎰 Запусти слоты, если автомаст выдаст три одинаковых слота, ты выиграешь 10 попыток\n\n⚙️ Стоимость одной игры 49 деталей\n\nУ тебя {details - 49} деталей и {user[31]} бесплатных прокруток', reply_markup=markup)
+            time.sleep(2.25)
+            if msg.dice.value in (1, 22, 43, 64):
+                bot.send_message(callback.message.chat.id, 'Ты получил 10 попыток!')
+                cur.execute("UPDATE users SET rolls = rolls + 10 WHERE id = '%i'" % int(user[0]))
+                conn.commit()
+            else: bot.send_message(callback.message.chat.id, 'Три одинаковых слота не выпало, повезет в следующий раз!')
     cur.close()
     conn.close()
 

@@ -123,14 +123,25 @@ def start(message):
         now1 = datetime.datetime.today() - datetime.timedelta(days=7)
         cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, num_1, num_2, num_3, num_4, num_5, username, driving_skill, duel_wins, influence_points, card_cooldown_level, dueling_with_id, dueling_with_card, msg_to_delete, rolls, last_dice, using_for_craft_common, using_for_craft_rare, using_for_craft_epic, using_for_craft_legendary, using_for_trade, details, slots_rolls) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%s', '%i', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', 0, 0, 0, 0, 0, '@' + message.from_user.username, 1, 0, 0, 1, 0, '0', 0, 0, json.dumps((now1.year, now1.month, now1.day, now1.hour, now1.minute, now1.second)), 0, 0, 0, 0, '0', 10000, 0))
         conn.commit()
-    cur.close()
-    conn.close()
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     new_card = types.KeyboardButton('Получить новую карту 🚗')
     menu = types.KeyboardButton('Главное меню 🏠')
     markup.add(new_card, menu)
     bot.send_message(message.chat.id, f'👋 Привет, <b><em>{message.from_user.first_name}</em></b>, рад тебя видеть в гараже!\n\n🎮 Здесь ты можешь собрать коллекцию из своих любимых машин, устраивать дуэли с друзьями, торговать своими карточками и играть в мини игры.\n\n🃏 Всего 4 вида карт: обычные, редкие, эпические и легендарные. За получение карточки ты поднимаешь свой <b><em>рейтинг</em></b>, чем реже карта, тем больше ты получишь за нее рейтинга.\n\n💰 Ты можешь продавать дупликаты или не нужные тебе карты в твоей коллекции, за продажу карт, а также за еженедельные задания ты можешь получать <b><em>очки влияния</em></b>, за которые, в свою очередь, можешь купить улучшения твоего персонажа или гаража.\n\nНу что, ты готов получить свою первую машину? Нажимай кнопку <b><em>"Получить новую карту"</em></b>, приятной игры! 🍀\n\n🧠 Если хочешь указать на ошибку или предложить что-то новое, то можешь написать нам на почту:\ncartoongaragehelp@mail.ru', parse_mode='html', reply_markup=markup)
+    bot.clear_step_handler_by_chat_id(message.chat.id)
+    user = cur.execute("SELECT * FROM users WHERE id = '%i'" % message.from_user.id).fetchone()
+    if int(user[20]) != 0:
+        id2 = int(user[20])
+        cur.execute("UPDATE users SET dueling_with_id = 0 WHERE id = '%i'" % message.chat.id)
+        conn.commit()
+        cur.execute("UPDATE users SET dueling_with_id = 0 WHERE id = '%i'" % id2)
+        conn.commit()
+        msg = bot.send_message(id2, 'Пользователь перезапустил бота')
+        bot.clear_step_handler_by_chat_id(id2)
+        bot.register_next_step_handler(msg, on_click)
     bot.register_next_step_handler(message, on_click)
+    cur.close()
+    conn.close()
 
 
 @bot.message_handler(commands=['info'])
@@ -212,6 +223,26 @@ def on_click(message):
     cur.close()
     conn.close()
     bot.register_next_step_handler(message, on_click)
+
+
+conn = sqlite3.connect('garage_data_base.sql')
+cur = conn.cursor()
+exist = cur.execute(''' SELECT count(name) FROM sqlite_master WHERE type='table' AND name='users' ''').fetchone()
+if exist[0] == 1:
+    ids = cur.execute('SELECT id FROM users').fetchall()
+    for id in ids:
+        id = id[0]
+        user = cur.execute("SELECT * FROM users WHERE id = '%i'" % id).fetchone()
+        cur.execute("UPDATE users SET dueling_with_id = 0 WHERE id = '%i'" % id)
+        conn.commit()
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        new_card = types.KeyboardButton('Получить новую карту 🚗')
+        menu = types.KeyboardButton('Главное меню 🏠')
+        markup.add(new_card, menu)
+        msg = bot.send_message(id, 'Бот был перезапущен', disable_notification=True, reply_markup=markup)
+        bot.register_next_step_handler_by_chat_id(id, on_click)
+cur.close()
+conn.close()
 
 
 @bot.callback_query_handler(func=lambda callback: True)
@@ -1243,14 +1274,18 @@ def callback_message(callback):
     elif json.loads(callback.data)[0] == 'field_card':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         user = cur.execute("SELECT * FROM users WHERE id = '%i'" % callback.message.chat.id).fetchone()
-        card = random.choices(specials, k=1)
+        card = random.choices(specials, k=1)[0]
         cards = json.loads(user[2])
         if card in cards: cards[card] += 1
         else: cards[card] = 1
         cur.execute("UPDATE users SET cards = '%s' WHERE id = '%i'" % (json.dumps(cards), int(user[0])))
         conn.commit()
+        cur.execute("UPDATE users SET rating = rating + 1 WHERE id = '%i'" % int(user[0]))
+        conn.commit()
+        cur.execute("UPDATE users SET number_of_cards = number_of_cards + 1 WHERE id = '%i'" % int(user[0]))
+        conn.commit()
         with open(f'./{card}.jpg', 'rb') as photo:
-            bot.send_photo(callback.message.chat.id, photo, f'Ты получил особую карту!:\n{all_cards[card][0]}\nГоды выпуска: {all_cards[card][1]}\nСтрана: {all_cards[card][2]}\nДвигатель: {all_cards[card][3]}')
+            bot.send_photo(callback.message.chat.id, photo, f'Ты получил особую карту!:\n{all_cards[card][0]}\nГоды выпуска: {all_cards[card][1]}\nСтрана: {all_cards[card][2]}\nДвигатель: {all_cards[card][3]}\nРейтинг: 5000')
     elif json.loads(callback.data)[0] == 'field_none':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.send_message(callback.message.chat.id, 'Ты выбрал поле без карты')

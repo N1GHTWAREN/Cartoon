@@ -1329,7 +1329,9 @@ def callback_message(callback):
         cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
         pay = types.InlineKeyboardButton(f'Заплатить {price},99 RUB', pay=True)
         markup.row(pay).row(cancel)
-        bot.send_invoice(callback.message.chat.id, f'Покупка {quantity} деталей ⚙️', f'Приобретение валюты деталей в количестве {quantity} за {price},99 рублей', str(quantity), payment_token, 'RUB', [types.LabeledPrice(f'{quantity} деталей ⚙️', price * 100 + 99)], reply_markup=markup)
+        msg = bot.send_invoice(callback.message.chat.id, f'Покупка {quantity} деталей ⚙️', f'Приобретение валюты деталей в количестве {quantity} за {price},99 рублей', str(quantity), payment_token, 'RUB', [types.LabeledPrice(f'{quantity} деталей ⚙️', price * 100 + 99)], reply_markup=markup)
+        cur.execute("UPDATE users SET msg_to_delete = '%i' WHERE id = '%i'" % (msg.message_id, callback.message.chat.id))
+        conn.commit()
     cur.close()
     conn.close()
 
@@ -1354,7 +1356,7 @@ def successful_payment(message):
     user = cur.execute("SELECT * FROM users WHERE id = '%i'" % message.chat.id).fetchone()
     bot.send_message(message.chat.id, f'✅ Ты успешно приобрел {amount} ⚙️ деталей!\n\nНа твоем балансе {user[26]} ⚙️ деталей')
     bot.register_next_step_handler(message, on_click)
-    bot.delete_message(message.chat.id, message.message_id - 1)
+    bot.delete_message(message.chat.id, int(user[18]))
 
 
 def duels(message):

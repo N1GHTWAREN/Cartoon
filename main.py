@@ -8,6 +8,7 @@ from telebot import types
 
 
 bot = telebot.TeleBot('6887806463:AAGFV6FPhnLj6Iy1-jAHfjcb3BmP10YXZh0')
+payment_token = '381764678:TEST:80326'
 bot.delete_webhook()
 all_cards = {
     '1': ('Aston Martin Valkyrie (2018)', '2016 - 2019', '🇬🇧', '6.5 л / 1176 л.с. / бензин', 'legendary', 1176),
@@ -146,7 +147,7 @@ def start(message):
     if cur.execute("SELECT EXISTS(SELECT 1 FROM users WHERE id = '%i')" % message.from_user.id).fetchone()[0] == 0:
         now = datetime.datetime.today() - datetime.timedelta(hours=4)
         now1 = datetime.datetime.today() - datetime.timedelta(days=7)
-        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, item_6, username, driving_skill, duel_wins, influence_points, card_cooldown_level, dueling_with_id, dueling_with_card, msg_to_delete, rolls, last_dice, using_for_craft_common, using_for_craft_rare, using_for_craft_epic, using_for_craft_legendary, using_for_trade, details, slots_rolls) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%s', '%i', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', '[]', '@' + message.from_user.username, 1, 0, 0, 1, 0, '0', 0, 0, json.dumps((now1.year, now1.month, now1.day, now1.hour, now1.minute, now1.second)), 0, 0, 0, 0, '0', 10000, 0))
+        cur.execute("INSERT INTO users (id, number_of_cards, cards, rating, last_time, item_1, item_2, item_3, item_4, item_5, item_6, username, driving_skill, duel_wins, influence_points, card_cooldown_level, dueling_with_id, dueling_with_card, msg_to_delete, rolls, last_dice, using_for_craft_common, using_for_craft_rare, using_for_craft_epic, using_for_craft_legendary, using_for_trade, details, slots_rolls) VALUES ('%i', '%i', '%s', '%i', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%i', '%i', '%i', '%i', '%i', '%s', '%i', '%i', '%s', '%i', '%i', '%i', '%i', '%s', '%i', '%i')" % (message.from_user.id, 0, '{}', 0, json.dumps((now.year, now.month, now.day, now.hour - 4, now.minute, now.second)), '[]', '[]', '[]', '[]', '[]', '[]', '@' + message.from_user.username, 1, 0, 0, 1, 0, '0', 0, 0, json.dumps((now1.year, now1.month, now1.day, now1.hour, now1.minute, now1.second)), 0, 0, 0, 0, '0', 0, 0))
         conn.commit()
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     new_card = types.KeyboardButton('Получить новую карту 🚗')
@@ -196,7 +197,7 @@ def on_click(message):
             randi = common_random
             if card_rarity == 'rare': randi = rare_random
             elif card_rarity == 'epic': randi = epic_random
-            else: randi = legendary_random
+            elif card_rarity == 'legendary': randi = legendary_random
             card_num = random.choice(randi)
             card = all_cards[card_num]
             rarity_of_card = rarity_test[card_rarity]
@@ -252,7 +253,8 @@ def on_click(message):
         dice = types.InlineKeyboardButton('Получить попытки 🎲', callback_data=json.dumps(['dice', '']))
         trade = types.InlineKeyboardButton('Обмен карт 🤝', callback_data=json.dumps(['trade', '']))
         mini_games = types.InlineKeyboardButton('Мини игры 🎮', callback_data=json.dumps(['games', '']))
-        markup.row(prof, deck).row(duel).row(shop).row(dice).row(trade).row(mini_games)
+        details = types.InlineKeyboardButton('Детали ⚙️', callback_data=json.dumps(['details', '']))
+        markup.row(prof, deck).row(duel).row(shop).row(dice).row(trade).row(mini_games).row(details)
         with open('./garage_main.png', 'rb') as photo:
             bot.send_photo(message.chat.id, photo, '🤔💭 Доступные действия:', reply_markup=markup)
     cur.close()
@@ -1308,8 +1310,51 @@ def callback_message(callback):
     elif json.loads(callback.data)[0] == 'field_none':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.send_message(callback.message.chat.id, 'Ты выбрал поле без карты')
+    elif json.loads(callback.data)[0] == 'details':
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        markup = types.InlineKeyboardMarkup()
+        buy_200 = types.InlineKeyboardButton('200 ⚙️', callback_data=json.dumps(['buy_details', 200, 99]))
+        buy_500 = types.InlineKeyboardButton('500 ⚙️', callback_data=json.dumps(['buy_details', 500, 229]))
+        buy_1000 = types.InlineKeyboardButton('1000 ⚙️', callback_data=json.dumps(['buy_details', 1000, 449]))
+        buy_3000 = types.InlineKeyboardButton('3000 ⚙️', callback_data=json.dumps(['buy_details', 3000, 1299]))
+        buy_5000 = types.InlineKeyboardButton('5000 ⚙️', callback_data=json.dumps(['buy_details', 5000, 1999]))
+        markup.row(buy_200).row(buy_500).row(buy_1000).row(buy_3000).row(buy_5000)
+        bot.send_message(callback.message.chat.id, 'Выбери сумму деталей, которую хочешь приобрести', reply_markup=markup)
+    elif json.loads(callback.data)[0] == 'buy_details':
+        bot.clear_step_handler_by_chat_id(callback.message.chat.id)
+        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        quantity = int(json.loads(callback.data)[1])
+        price = int(json.loads(callback.data)[2])
+        markup = types.InlineKeyboardMarkup()
+        cancel = types.InlineKeyboardButton('🚫 Отменить действие', callback_data=json.dumps(['cancel', '']))
+        pay = types.InlineKeyboardButton(f'Заплатить {price},99 RUB', pay=True)
+        markup.row(pay).row(cancel)
+        bot.send_invoice(callback.message.chat.id, f'Покупка {quantity} деталей ⚙️', f'Приобретение валюты деталей в количестве {quantity} за {price},99 рублей', str(quantity), payment_token, 'RUB', [types.LabeledPrice(f'{quantity} деталей ⚙️', price * 100 + 99)], reply_markup=markup)
     cur.close()
     conn.close()
+
+
+@bot.shipping_query_handler(func=lambda query: True)
+def shipping(shipping_query):
+    bot.answer_shipping_query(shipping_query.id, ok=True)
+
+
+@bot.pre_checkout_query_handler(func=lambda query: True)
+def pre_checkout_query_handler(pre_checkout_query):
+    bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+
+@bot.message_handler(content_types=['successful_payment'])
+def successful_payment(message):
+    conn = sqlite3.connect('garage_data_base.sql')
+    cur = conn.cursor()
+    amount = int(message.successful_payment.invoice_payload)
+    cur.execute("UPDATE users SET details = details + '%i' WHERE id = '%i'" % (amount, message.chat.id))
+    conn.commit()
+    user = cur.execute("SELECT * FROM users WHERE id = '%i'" % message.chat.id).fetchone()
+    bot.send_message(message.chat.id, f'✅ Ты успешно приобрел {amount} ⚙️ деталей!\n\nНа твоем балансе {user[26]} ⚙️ деталей')
+    bot.register_next_step_handler(message, on_click)
+    bot.delete_message(message.chat.id, message.message_id - 1)
 
 
 def duels(message):

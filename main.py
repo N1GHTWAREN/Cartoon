@@ -226,7 +226,7 @@ def on_click(message):
             conn.commit()
         else:
             # time_for_cooldown_lvls[cooldown_lvl - 1]
-            if (datetime.datetime.now() - last_time).seconds >= 0:
+            if (datetime.datetime.now() - last_time).seconds >= time_for_cooldown_lvls[cooldown_lvl - 1]:
                 card_rarity = random.choices(for_random, weights=rarities)[0]
                 randi = common_random
                 if card_rarity == 'rare': randi = rare_random
@@ -252,7 +252,7 @@ def on_click(message):
                 conn.commit()
             else:
                 # time_for_cooldown_lvls[cooldown_lvl - 1]
-                bot.send_message(message.chat.id, f'До следующей попытки {time_conversion(0 - (datetime.datetime.now() - last_time).seconds)}')
+                bot.send_message(message.chat.id, f'До следующей попытки {time_conversion(time_for_cooldown_lvls[cooldown_lvl - 1] - (datetime.datetime.now() - last_time).seconds)}')
     elif message.text == 'Главное меню 🏠':
         markup = types.InlineKeyboardMarkup()
         prof = types.InlineKeyboardButton('Профиль 👤', callback_data=json.dumps(['profile', '']))

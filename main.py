@@ -5,10 +5,11 @@ import json
 import random
 import datetime
 from telebot import types
+import config
 
 
-bot = telebot.TeleBot('6887806463:AAGFV6FPhnLj6Iy1-jAHfjcb3BmP10YXZh0')
-payment_token = '381764678:TEST:80326'
+bot = telebot.TeleBot(config.BOT_TOKEN)
+payment_token = config.PAYMENT_TOKEN
 bot.delete_webhook()
 all_cards = {
     '1': ('Aston Martin Valkyrie (2018)', '2016 - 2019', '🇬🇧', '6.5 л / 1176 л.с. / бензин', 'legendary', 1176),

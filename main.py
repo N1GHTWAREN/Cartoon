@@ -211,7 +211,7 @@ def on_click(message):
             rarity_of_card = rarity_test[card_rarity]
             with open(f'{card_num}.jpg', 'rb') as photo:
                 if rolls != 0: bot.send_photo(message.chat.id, photo, f'Ты получил новую карту: {card[0]}\nГоды выпуска: {card[1]}\nСтрана: {card[2]}\nДвигатель: {card[3]}\nРедкость: {rarity_of_card[0]}\nРейтинг + {str(rarity_of_card[1])}')
-                else: bot.send_photo(message.chat.id, photo, f'Ты получил новую карту: {card[0]}\nГоды выпуска: {card[1]}\nСтрана: {card[2]}\nДвигатель: {card[3]}\nРедкость: {rarity_of_card[0]}\nРейтинг + {str(rarity_of_card[1])}\n⏳ До следующей попытки {time_for_cooldown_lvls[cooldown_lvl - 1] // 3600} часа')
+                elif (datetime.datetime.now() - last_time).seconds >= time_for_cooldown_lvls[cooldown_lvl - 1]: bot.send_photo(message.chat.id, photo, f'Ты получил новую карту: {card[0]}\nГоды выпуска: {card[1]}\nСтрана: {card[2]}\nДвигатель: {card[3]}\nРедкость: {rarity_of_card[0]}\nРейтинг + {str(rarity_of_card[1])}\n⏳ До следующей попытки {time_for_cooldown_lvls[cooldown_lvl - 1] // 3600} часа')
             cur.execute("UPDATE users SET number_of_cards = number_of_cards + 1 WHERE id = '%i'" % message.chat.id)
             conn.commit()
             cur.execute("UPDATE users SET rating = rating + '%i' WHERE id = '%i'" % (rarity_of_card[1], message.chat.id))
